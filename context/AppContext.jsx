@@ -43,60 +43,28 @@ export function AppProvider({ children }) {
   useEffect(() => { kpisRef.current = kpis; }, [kpis]);
   useEffect(() => { tratRef.current = tratamientos; }, [tratamientos]);
 
-  // ── Tiempo y Contexto ──────────────────────────────────────
+  // ── Accrual Engine (solo mes actual) ──────────────────────
   const diaActual      = getCurrentDayOfMonth();
   const diasTotalesMes = getDaysInMonth(selectedYear, selectedMonth);
   const esMesActual    = isCurrentMonth(selectedYear, selectedMonth);
 
-  // ── Motor de Cálculo Dinámico (Solo mes actual) ─────────────
-  const factorProrrateo = calcFactorProrrateo(diaActual, diasTotalesMes);
-  
-  // A. Referencias y Punto Equilibrio Meta
-  const costoFijoReferencia = kpis?.prev?.costosFijosTotales ?? 0;
-  const ratioReferencia     = kpis?.prev?.ratioMargenReferencia ?? 0.65;
-  
-  const peTotalMensual = ratioReferencia > 0 
-    ? costoFijoReferencia / ratioReferencia 
-    : (kpis?.puntoEquilibrio ?? 0);
+  // Costo Fijo de Referencia = costos fijos del mes anterior (desde kpis.prev)
+  const costoFijoReferencia = kpis?.prev?.costosFijos ?? 0;
 
-  const peDinamico = peTotalMensual * factorProrrateo;
-
-  // B. Márgenes y Utilidad Real a Hoy (Prorrateo)
-  const ventasPTD = kpis?.ventasTotales ?? 0;
-  const presupuestoTotalMensual = kpis?.costosTotales ?? 0;
-  const costosProrrateadosHoy = presupuestoTotalMensual * factorProrrateo;
-
-  const utilidadAjustada = esMesActual && kpis
-    ? ventasPTD - costosProrrateadosHoy
-    : kpis?.utilidadOperativa ?? 0;
-
-  const rentabilidadDinamica = ventasPTD > 0 
-    ? utilidadAjustada / ventasPTD 
-    : (kpis?.margenRentabilidad ?? 0);
-
-  const msReal = ventasPTD > 0 
-    ? (ventasPTD - peDinamico) / ventasPTD 
-    : 0;
-
-  // C. Lógica de Semáforos y UI
-  const estadoSemaforo = esMesActual
-    ? (utilidadAjustada >= 0 ? "SUCCESS" : "DANGER")
-    : (kpis?.margenSeguridad > 0 ? "SUCCESS" : "DANGER");
-
-  const isDangerMS = esMesActual ? msReal < 0.20 : (kpis?.margenSeguridad < 0.20);
-
-  const insightPE = `Doctora, al día ${diaActual}, su meta de facturación para cubrir costos es de ${Math.round(peDinamico).toLocaleString("es-PY")}.`;
-  const insightMS = msReal >= 0 
-    ? `Su Margen de Seguridad actual es del ${(msReal * 100).toFixed(2)}%. Esto indica que sus ventas pueden caer un ${(msReal * 100).toFixed(2)}% antes de que la clínica empiece a perder dinero hoy.`
-    : `Doctora, actualmente sus ventas están un ${Math.abs(msReal * 100).toFixed(2)}% por debajo de lo necesario para cubrir los costos prorrateados a hoy.`;
-
-  // ── Variables de Soporte y Compatibilidad ─────────────
   const costoFijoDevengado = esMesActual
     ? calcCostoFijoDevengado(costoFijoReferencia, diaActual, diasTotalesMes)
     : kpis?.costosFijos ?? 0;
 
+  const factorProrrateo = calcFactorProrrateo(diaActual, diasTotalesMes);
+
+  // ── Utilidad ajustada (con accrual en mes actual) ─────────
+  const utilidadAjustada = esMesActual && kpis
+    ? (kpis.ventasTotales ?? 0) - (kpis.costosVariables ?? 0) - costoFijoDevengado
+    : kpis?.utilidadOperativa ?? 0;
+
+  // ── Estados semáforo ───────────────────────────────────────
   const estadoGlobal = kpis
-    ? calcEstadoGlobal(esMesActual ? msReal : kpis.margenSeguridad)
+    ? calcEstadoGlobal(kpis.margenSeguridad)
     : null;
 
   const estadoLiquidez = kpis
@@ -107,9 +75,9 @@ export function AppProvider({ children }) {
     ? parseDiaEquilibrio(kpis.diaEquilibrio)
     : null;
 
-  const metaAlcanzada = esMesActual 
-    ? (ventasPTD >= peDinamico)
-    : (diaEquilibrioNum ? diaActual >= diaEquilibrioNum : false);
+  const metaAlcanzada = diaEquilibrioNum
+    ? diaActual >= diaEquilibrioNum
+    : false;
 
   // ── Fetch de datos principales ─────────────────────────────
   const fetchKPIs = useCallback(async (year, month) => {
@@ -216,19 +184,11 @@ export function AppProvider({ children }) {
         costoFijoReferencia,
         factorProrrateo,
         utilidadAjustada,
-        rentabilidadDinamica,
         // Semáforos
         estadoGlobal,
         estadoLiquidez,
         diaEquilibrioNum,
         metaAlcanzada,
-        // [NUEVO] Motor Dinámico
-        peDinamico,
-        msReal,
-        insightPE,
-        insightMS,
-        estadoSemaforo,
-        isDangerMS,
         // Acciones
         refetch,
         fetchTratamientosForCurrentMonth,

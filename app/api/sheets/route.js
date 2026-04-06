@@ -25,89 +25,132 @@ import {
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const type  = searchParams.get("type")  ?? "kpis";
+  console.log(`==> API REQUEST: ${type} from ${request.headers.get('host')}`);
   const year  = parseInt(searchParams.get("year")  ?? new Date().getFullYear());
   const month = parseInt(searchParams.get("month") ?? new Date().getMonth());
 
-  console.log(`==> API V2.0.3 [${type}] Request`);
-
   try {
+    // ── Listar hojas disponibles ─────────────────────────────
     if (type === "sheets") {
       const sheets = await getAvailableSheets();
-      return NextResponse.json({ sheets, v: "2.0.3" });
+      return NextResponse.json({ sheets });
     }
 
     const sheetName = getSheetName(year, month);
 
+    // ── KPIs principales ─────────────────────────────────────
     if (type === "kpis") {
+      // [OPTIMIZACIÓN 1: PARALLEL FETCHING]
+      // Ejecutamos las 2 llamadas en paralelo para reducir tiempo de respuesta
       const prevMonth = month === 0 ? 11 : month - 1;
       const prevYear  = month === 0 ? year - 1 : year;
       const prevSheetName = getSheetName(prevYear, prevMonth);
       
+      // [OPTIMIZACIÓN 1 + 3: PARALLEL FETCHING + CACHE]
       const [raw, rawPrev] = await Promise.all([
         getCachedKPIs(year, month, () => getMonthlyKPIs(sheetName)),
         getCachedKPIs(prevYear, prevMonth, () => getMonthlyKPIs(prevSheetName)),
       ]);
 
       if (!raw) {
-        return NextResponse.json({ error: `Hoja ${sheetName} no hallada`, v: "2.0.3" }, { status: 404 });
+        return NextResponse.json(
+          { error: `La hoja "${sheetName}" no existe en el Google Sheet.` },
+          { status: 404 }
+        );
       }
 
+      // Costos: B7=costosFijos, B8=costosTotales → variables = total - fijos
+      const costosFijosRaw    = parseSheetNumber(raw.costosFijosBase);
+      const costosTotalesRaw  = parseSheetNumber(raw.costosTotales);
+      const costosVariablesCalc = Math.max(costosTotalesRaw - costosFijosRaw, 0);
+
       const kpis = {
-        ventasTotales: parseSheetNumber(raw.ventasTotales),
-        costosVariables: Math.max(parseSheetNumber(raw.costosTotales) - parseSheetNumber(raw.costosFijosBase), 0),
-        costosFijos: parseSheetNumber(raw.costosFijosBase),
-        honorariosLaura: parseSheetNumber(raw.honorariosLaura),
-        costosFijosTotales: parseSheetNumber(raw.costosFijosBase) + parseSheetNumber(raw.honorariosLaura),
-        costosTotales: parseSheetNumber(raw.costosTotales),
-        utilidadOperativa: parseSheetNumber(raw.utilidadOperativa),
-        ingresosReales: parseSheetNumber(raw.ingresosReales),
-        egresosReales: parseSheetNumber(raw.egresosReales),
-        flujoCajaNeto: parseSheetNumber(raw.flujoCajaNeto),
-        puntoEquilibrio: parseSheetNumber(raw.puntoEquilibrio),
+        ventasTotales:      parseSheetNumber(raw.ventasTotales),
+        costosVariables:    costosVariablesCalc,          // calculado
+        costosFijos:        costosFijosRaw,               // B7
+        costosTotales:      costosTotalesRaw,             // B8
+        utilidadOperativa:  parseSheetNumber(raw.utilidadOperativa),
+        honorariosLaura:    parseSheetNumber(raw.honorariosLaura),
+        ingresosReales:     parseSheetNumber(raw.ingresosReales),
+        egresosReales:      parseSheetNumber(raw.egresosReales),
+        flujoCajaNeto:      parseSheetNumber(raw.flujoCajaNeto),
+        puntoEquilibrio:    parseSheetNumber(raw.puntoEquilibrio),
         margenRentabilidad: normalizePercent(raw.margenRentabilidad),
         margenSeguridad:    normalizePercent(raw.margenSeguridad),
         diaEquilibrio:      raw.diaEquilibrio,
+        // B24 viene como decimal 0-1 (ej: 0.85 = 85%) — NO usar normalizePercent
         indiceCobrabilidad: parseSheetNumber(raw.indiceCobrabilidad),
         amortizaciones:     parseSheetNumber(raw.amortizaciones),
-        ratioMargenReferencia: normalizePercent(raw.ratioMargenReferencia),
         prev: rawPrev ? {
-          ventasTotales: parseSheetNumber(rawPrev.ventasTotales),
-          costosFijosTotales: parseSheetNumber(rawPrev.costosFijosBase) + parseSheetNumber(rawPrev.honorariosLaura),
+          ventasTotales:   parseSheetNumber(rawPrev.ventasTotales),
+          costosFijos:     parseSheetNumber(rawPrev.costosFijosBase),
           puntoEquilibrio: parseSheetNumber(rawPrev.puntoEquilibrio),
-          ratioMargenReferencia: normalizePercent(rawPrev.ratioMargenReferencia),
+          margenSeguridad: normalizePercent(rawPrev.margenSeguridad),
         } : null,
-        sheetName, year, month,
-        v: "2.0.3",
+        sheetName, prevSheetName, year, month,
         fetchedAt: new Date().toISOString(),
       };
+
       return NextResponse.json(kpis);
     }
 
+    // ── Tabla de tratamientos ────────────────────────────────
     if (type === "tratamientos") {
+      // [OPTIMIZACIÓN 1: PARALLEL FETCHING]
+      // Ejecutamos las 2 llamadas en paralelo para reducir tiempo de respuesta
       const prevMonth = month === 0 ? 11 : month - 1;
       const prevYear  = month === 0 ? year - 1 : year;
       const prevSheetName = getSheetName(prevYear, prevMonth);
-      const [t, tp] = await Promise.all([getTratamientos(sheetName), getTratamientos(prevSheetName)]);
-      return NextResponse.json({ tratamientos: t, tratamientosPrev: tp, v: "2.0.3" });
+      
+      const [tratamientos, tratamientosPrev] = await Promise.all([
+        getTratamientos(sheetName),
+        getTratamientos(prevSheetName),
+      ]);
+
+      return NextResponse.json({
+        tratamientos,
+        tratamientosPrev,
+        sheetName,
+        fetchedAt: new Date().toISOString(),
+      });
     }
 
+    // ── gastos por cuenta ──────────────────────────────────────
     if (type === "gastos") {
+      // [COMPLETO: PARALLELIZAR GASTOS]
       const [gastos, rawKpis] = await Promise.all([
         getCachedGastos(year, month, () => getGastos(sheetName)),
         getCachedKPIs(year, month, () => getMonthlyKPIs(sheetName)),
       ]);
-      return NextResponse.json({ gastos, ventasTotales: rawKpis ? parseSheetNumber(rawKpis.ventasTotales) : 0, v: "2.0.3" });
+      const ventasTotales = rawKpis ? parseSheetNumber(rawKpis.ventasTotales) : 0;
+      return NextResponse.json({
+        gastos,
+        ventasTotales,
+        sheetName,
+        fetchedAt: new Date().toISOString(),
+      });
     }
 
+    // ── Heatmap de márgenes diarios ────────────────────────────
     if (type === "heatmap") {
       const days = await getHeatmapDays(sheetName);
-      return NextResponse.json({ days: days.map(d => ({ fecha: d.fecha.toISOString(), margen: d.margen })), v: "2.0.3" });
+      return NextResponse.json({
+        days: days.map((d) => ({
+          fecha: d.fecha.toISOString(),
+          margen: d.margen,
+        })),
+        sheetName,
+        fetchedAt: new Date().toISOString(),
+      });
     }
 
-    return NextResponse.json({ error: "Tipo inválido", v: "2.0.3" }, { status: 400 });
+    return NextResponse.json({ error: "Tipo de consulta inválido" }, { status: 400 });
 
-  } catch (err) {
-    console.error("[API V2.0.3] Error:", err.message);
-    return NextResponse.json({ error: "[V2.0.3] Error: " + err.message, v: "2.0.3" }, { status: 500 });
+  } catch (error) {
+    console.error("[API/sheets] [FORCE_NEW_CODE] Error:", error.message);
+    return NextResponse.json(
+      { error: "[FORCE_NEW_CODE] Error al conectar con Google Sheets: " + error.message },
+      { status: 500 }
+    );
   }
 }
