@@ -58,13 +58,18 @@ export function AppProvider({ children }) {
     ? costoFijoReferencia / ratioReferencia 
     : (kpis?.puntoEquilibrio ?? 0);
 
-  const peDinamico = peTotalMensual * (diaActual / diasTotalesMes);
+  const factorTiempo = diaActual / diasTotalesMes;
+  const peDinamico = peTotalMensual * factorTiempo;
 
-  // C. Margen de Seguridad Real
+  // C. Márgenes y Utilidad Dinámica (Solo mes actual)
   const ventasPTD = kpis?.ventasTotales ?? 0;
-  const msReal = ventasPTD > 0 
-    ? (ventasPTD - peDinamico) / ventasPTD 
-    : 0;
+  // Costos prorrateados: Lo que "debería" haber gastado a día de hoy según presupuesto total
+  const presupuestoTotalMensual = kpis?.costosTotales ?? 0;
+  const costosProrrateados = presupuestoTotalMensual * factorTiempo;
+
+  const utilidadDinamica = ventasPTD - costosProrrateados;
+  const rentabilidadDinamica = ventasPTD > 0 ? utilidadDinamica / ventasPTD : 0;
+  const msReal = ventasPTD > 0 ? (ventasPTD - peDinamico) / ventasPTD : 0;
 
   // ── Variables para la UI ───────────────────────────────────
   const estadoSemaforo = esMesActual
@@ -74,7 +79,9 @@ export function AppProvider({ children }) {
   const isDangerMS = esMesActual ? msReal < 0.20 : (kpis?.margenSeguridad < 0.20);
 
   const insightPE = `Doctora, al día ${diaActual}, su meta de facturación para cubrir costos es de ${Math.round(peDinamico).toLocaleString("es-PY")}.`;
-  const insightMS = `Su Margen de Seguridad actual es del ${(msReal * 100).toFixed(2)}%. Esto indica que sus ventas pueden caer un ${(msReal * 100).toFixed(2)}% antes de que la clínica empiece a perder dinero hoy.`;
+  const insightMS = msReal >= 0 
+    ? `Su Margen de Seguridad actual es del ${(msReal * 100).toFixed(2)}%. Esto indica que sus ventas pueden caer un ${(msReal * 100).toFixed(2)}% antes de que la clínica empiece a perder dinero hoy.`
+    : `Doctora, actualmente sus ventas están un ${Math.abs(msReal * 100).toFixed(2)}% por debajo de lo necesario para cubrir los costos prorrateados a hoy.`;
 
   // ── Antiguos cálculos de Accrual (compatibilidad) ──────────
   const costoFijoDevengado = esMesActual
@@ -83,9 +90,39 @@ export function AppProvider({ children }) {
 
   const factorProrrateo = calcFactorProrrateo(diaActual, diasTotalesMes);
 
+  // ── [DINÁMICO] Utilidad y Rentabilidad Reales a Hoy ─────────
+  const costoFijoReferencia = kpis?.prev?.costosFijosTotales ?? 0;
+  const ratioReferencia     = kpis?.prev?.ratioMargenReferencia ?? 0.65;
+  
+  // Punto Equilibrio Meta
+  const peTotalMensual = ratioReferencia > 0 
+    ? costoFijoReferencia / ratioReferencia 
+    : (kpis?.puntoEquilibrio ?? 0);
+  const peDinamico = peTotalMensual * factorProrrateo;
+
+  // Utilidad Dinámica Cruzada con Prorrateo (Imagen 2)
+  const ventasPTD = kpis?.ventasTotales ?? 0;
+  const presupuestoTotalMensual = kpis?.costosTotales ?? 0;
+  const costosProrrateadosHoy = presupuestoTotalMensual * factorProrrateo;
+
   const utilidadAjustada = esMesActual && kpis
-    ? (kpis.ventasTotales ?? 0) - (kpis.costosVariables ?? 0) - costoFijoDevengado
+    ? ventasPTD - costosProrrateadosHoy
     : kpis?.utilidadOperativa ?? 0;
+
+  const rentabilidadDinamica = ventasPTD > 0 
+    ? utilidadAjustada / ventasPTD 
+    : (kpis?.margenRentabilidad ?? 0);
+
+  const msReal = ventasPTD > 0 
+    ? (ventasPTD - peDinamico) / ventasPTD 
+    : 0;
+
+  // ── Lógica de Semáforos ─────────────────────────────────────
+  const estadoSemaforo = esMesActual
+    ? (utilidadAjustada >= 0 ? "SUCCESS" : "DANGER")
+    : (kpis?.margenSeguridad > 0 ? "SUCCESS" : "DANGER");
+
+  const isDangerMS = esMesActual ? msReal < 0.20 : (kpis?.margenSeguridad < 0.20);
 
   const estadoGlobal = kpis
     ? calcEstadoGlobal(esMesActual ? msReal : kpis.margenSeguridad)
@@ -208,6 +245,7 @@ export function AppProvider({ children }) {
         costoFijoReferencia,
         factorProrrateo,
         utilidadAjustada,
+        rentabilidadDinamica,
         // Semáforos
         estadoGlobal,
         estadoLiquidez,

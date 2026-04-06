@@ -19,7 +19,7 @@ const { tooltips, insights, thresholds } = APP_CONFIG;
 export default function SignosVitales() {
   const {
     kpis, loading, error,
-    utilidadAjustada, esMesActual,
+    utilidadAjustada, rentabilidadDinamica, esMesActual,
     diaActual, diaEquilibrioNum, metaAlcanzada,
     estadoGlobal,
     // [NUEVO] Motor Dinámico
@@ -44,7 +44,8 @@ export default function SignosVitales() {
   const varMS = prev.margenSeguridad ? formatVariation(esMesActual ? msReal : kpis.margenSeguridad, prev.margenSeguridad) : null;
 
   // ── Color Margen Rentabilidad ────────────────────────────────
-  const mrColor = kpis.margenRentabilidad < thresholds.margenRentabilidad.critico
+  const rentActual = esMesActual ? rentabilidadDinamica : kpis.margenRentabilidad;
+  const mrColor = rentActual < thresholds.margenRentabilidad.critico
     ? "danger" : "success";
 
   // ── Insights Activos ─────────────────────────────────────────
@@ -93,7 +94,7 @@ export default function SignosVitales() {
     <div style={{ position: "relative" }}>
       {/* Marcador de Versión para Verificación (VISIBLE) */}
       <div style={{ position: "absolute", top: "4px", right: "12px", fontSize: "0.6rem", color: "var(--color-primary-light)", opacity: 0.8, fontWeight: 700, zIndex: 10 }}>
-        ENGINE V2.0.4
+        ENGINE V2.0.5
       </div>
 
       {/* ── [NUEVO] Diagnóstico Dinámico PRIORITARIO ── */}
@@ -134,7 +135,7 @@ export default function SignosVitales() {
         {/* 3. Margen de Rentabilidad */}
         <KPICard
           label="Margen Rentabilidad"
-          value={formatPercentSmart(kpis.margenRentabilidad)}
+          value={formatPercentSmart(esMesActual ? rentabilidadDinamica : kpis.margenRentabilidad)}
           valueColor={mrColor}
           tooltip={tooltips.margenRentabilidad}
           accent={mrColor}
