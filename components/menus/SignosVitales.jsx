@@ -91,10 +91,23 @@ export default function SignosVitales() {
 
   return (
     <div style={{ position: "relative" }}>
-      {/* Marcador de Versión para Verificación */}
-      <div style={{ position: "absolute", top: "-30px", right: "0", fontSize: "0.6rem", color: "var(--text-muted)", opacity: 0.5 }}>
-        Engine V2.0.3
+      {/* Marcador de Versión para Verificación (VISIBLE) */}
+      <div style={{ position: "absolute", top: "4px", right: "12px", fontSize: "0.6rem", color: "var(--color-primary-light)", opacity: 0.8, fontWeight: 700, zIndex: 10 }}>
+        ENGINE V2.0.4
       </div>
+
+      {/* ── [NUEVO] Diagnóstico Dinámico PRIORITARIO ── */}
+      {activeInsights.length > 0 && (
+        <div style={{ marginBottom: "20px" }}>
+          <div className="section-title">Estado de Supervivencia Hoy</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {activeInsights.filter(i => i.titulo).map((insight, i) => (
+              <InsightCard key={i} {...insight} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Grid de KPIs ── */}
       <div className="kpi-grid">
 
