@@ -21,7 +21,8 @@ export default function SignosVitales() {
     kpis, loading, error,
     utilidadAjustada, esMesActual,
     diaActual, diaEquilibrioNum, metaAlcanzada,
-    estadoGlobal,
+    estadoGlobal: estadoGlobalBase,
+    costoFijoReferencia, diasTotalesMes
   } = useApp();
 
   const [modalKey, setModalKey] = useState(null);
@@ -35,13 +36,46 @@ export default function SignosVitales() {
 
   const prev = kpis.prev ?? {};
 
+  // ── MOTOR DE CÁLCULO DINÁMICO (PE Y MS) ───────────────────
+  const ratioMargenReal = kpis.ratioMargenReal || 0.4287; // AB67
+  const ventasActualesPTD = kpis?.ventasTotales || 0;
+
+  const peTotalMensual = ratioMargenReal > 0 ? costoFijoReferencia / ratioMargenReal : 0;
+  const peDinamico = esMesActual ? peTotalMensual * (diaActual / (diasTotalesMes || 30)) : (kpis?.puntoEquilibrio || 0);
+
+  const msCalculado = esMesActual 
+    ? (ventasActualesPTD > 0 ? (ventasActualesPTD - peDinamico) / ventasActualesPTD : 0) 
+    : (kpis?.margenSeguridad || 0);
+
+  const currentPE = esMesActual ? peDinamico : kpis.puntoEquilibrio;
+  const currentMS = esMesActual ? msCalculado : kpis.margenSeguridad;
+
+  // 1. Margen de Rentabilidad Dinámico
+  const currentMR = esMesActual 
+    ? (ventasActualesPTD > 0 ? utilidadAjustada / ventasActualesPTD : 0)
+    : kpis.margenRentabilidad;
+
+  // 2. Día de Equilibrio Dinámico Proyectado
+  const projectedVelocity = ventasActualesPTD / (diaActual || 1);
+  const currentDiaEq = esMesActual
+    ? (projectedVelocity > 0 ? Math.max(1, Math.ceil(peTotalMensual / projectedVelocity)) : null)
+    : diaEquilibrioNum;
+
+  const currentMetaAlcanzada = esMesActual 
+    ? (currentDiaEq && diaActual >= currentDiaEq) 
+    : metaAlcanzada;
+
+  const estadoGlobal = esMesActual
+    ? (ventasActualesPTD > peDinamico ? "success" : "danger")
+    : estadoGlobalBase;
+
   // ── Variaciones PTD ─────────────────────────────────────────
   const varVentas = prev.ventasTotales ? formatVariation(kpis.ventasTotales, prev.ventasTotales) : null;
   const varUtilidad = prev.ventasTotales ? formatVariation(utilidadAjustada, prev.ventasTotales * (prev.margenSeguridad ?? 0)) : null;
-  const varMS = prev.margenSeguridad ? formatVariation(kpis.margenSeguridad, prev.margenSeguridad) : null;
+  const varMS = prev.margenSeguridad ? formatVariation(currentMS, prev.margenSeguridad) : null;
 
   // ── Color Margen Rentabilidad ────────────────────────────────
-  const mrColor = kpis.margenRentabilidad < thresholds.margenRentabilidad.critico
+  const mrColor = currentMR < thresholds.margenRentabilidad.critico
     ? "danger" : "success";
 
   // ── Insights Activos ─────────────────────────────────────────
@@ -54,20 +88,34 @@ export default function SignosVitales() {
   }
 
   // B. Margen bajo
-  if (kpis.margenRentabilidad < thresholds.margenRentabilidad.critico) {
+  if (currentMR < thresholds.margenRentabilidad.critico) {
     activeInsights.push(insights.margenBajo);
   }
 
   // C. Calendario fallido
-  if (diaEquilibrioNum && diaActual > diaEquilibrioNum && utilidadAjustada < 0) {
+  if (currentDiaEq && diaActual > currentDiaEq && utilidadAjustada < 0) {
     activeInsights.push(insights.calendarioFallido);
+  }
+
+  // D. Motor Dinámico MS (Mes Actual)
+  if (esMesActual) {
+    activeInsights.push({
+      emoji: currentMS < 0.20 ? "🚨" : "🛡️",
+      titulo: `Día ${diaActual}: Meta de Equilibrio Dinámico`,
+      texto: `Doctor, al día ${diaActual}, su meta de facturación para cubrir costos es de ${formatCurrency(peDinamico)}.\n\nSu Margen de Seguridad actual es del ${formatPercentSmart(currentMS)}. Esto indica que sus ventas pueden caer un ${formatPercentSmart(currentMS)} antes de que la clínica empiece a perder dinero hoy.`,
+      tipo: currentMS < 0.20 ? "danger" : "info"
+    });
   }
 
   // ── Día de equilibrio ────────────────────────────────────────
   const diaEqDisplay = (() => {
+    if (esMesActual) {
+      if (!currentDiaEq) return "Proyección inviable (ventas $0)";
+      if (currentDiaEq > diasTotalesMes) return `No se logrará (${currentDiaEq} días req.)`;
+      return `Proyectado: Día ${currentDiaEq}`;
+    }
     const raw = kpis.diaEquilibrio;
     if (!raw) return "—";
-    // Si viene como fecha completa, extraemos el día
     const n = parseDiaEquilibrio(raw);
     return n ? `Día ${n}` : String(raw);
   })();
@@ -99,8 +147,8 @@ export default function SignosVitales() {
 
         {/* 3. Margen de Rentabilidad */}
         <KPICard
-          label="Margen Rentabilidad"
-          value={formatPercentSmart(kpis.margenRentabilidad)}
+          label={esMesActual ? "M. Rentabilidad (Dinámico)" : "Margen de Rentabilidad"}
+          value={formatPercentSmart(currentMR)}
           valueColor={mrColor}
           tooltip={tooltips.margenRentabilidad}
           accent={mrColor}
@@ -110,10 +158,10 @@ export default function SignosVitales() {
         <KPICard
           label="Margen de Seguridad"
           tooltip={tooltips.margenSeguridad}
-          accent={estadoGlobal === "critico" ? "danger" : estadoGlobal === "precaucion" ? "warning" : "success"}
+          accent={currentMS < 0.20 ? "danger" : estadoGlobal === "precaucion" ? "warning" : "success"}
           fullWidth={false}
         >
-          <GaugeChart value={kpis.margenSeguridad} />
+          <GaugeChart value={currentMS} />
         </KPICard>
 
         {/* 5. Índice de Cobrabilidad — Donut */}
@@ -133,12 +181,12 @@ export default function SignosVitales() {
       {/* ── Punto de Equilibrio ── */}
       <div className="card" style={{ marginBottom: "12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div className="card-label">Punto de Equilibrio</div>
+          <div className="card-label">{esMesActual ? "Punto de Eq. Dinámico (Hoy)" : "Punto de Equilibrio (Mes)"}</div>
           <div className="card-value-sm" style={{ color: "var(--color-primary-light)" }}>
-            {formatCurrency(kpis.puntoEquilibrio)}
+            {formatCurrency(currentPE)}
           </div>
           {kpis.prev?.puntoEquilibrio && (() => {
-            const v = formatVariation(kpis.puntoEquilibrio, kpis.prev.puntoEquilibrio);
+            const v = formatVariation(currentPE, kpis.prev.puntoEquilibrio);
             return (
               <div style={{ fontSize: "0.7rem", marginTop: "3px", color: v.direction === "up" ? "var(--color-success-light)" : v.direction === "down" ? "var(--color-danger)" : "var(--text-muted)", fontWeight: 600 }}>
                 {v.label} vs. mes ant.
@@ -151,13 +199,13 @@ export default function SignosVitales() {
 
       {/* ── Hito: Día de Equilibrio ── */}
       <div className="card" style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "14px" }}>
-        <div className="cal-badge" style={{ borderColor: metaAlcanzada ? "var(--color-success)" : "var(--border)" }}>
+        <div className="cal-badge" style={{ borderColor: currentMetaAlcanzada ? "var(--color-success)" : "var(--border)" }}>
           <Calendar size={13} style={{ color: "var(--text-secondary)", marginBottom: "2px" }} />
-          <div className="cal-day" style={{ color: metaAlcanzada ? "var(--color-success-light)" : "var(--text-primary)" }}>
-            {diaEquilibrioNum ?? "—"}
+          <div className="cal-day" style={{ color: currentMetaAlcanzada ? "var(--color-success-light)" : "var(--text-primary)" }}>
+            {currentDiaEq && currentDiaEq <= diasTotalesMes ? currentDiaEq : "—"}
           </div>
           <div className="cal-label">
-            {diaEquilibrioNum ? "Equil." : "N/D"}
+            {currentDiaEq && currentDiaEq <= diasTotalesMes ? "Equil." : "N/D"}
           </div>
         </div>
 
@@ -166,16 +214,16 @@ export default function SignosVitales() {
           <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-primary)" }}>
             {diaEqDisplay}
           </div>
-          {esMesActual && diaEquilibrioNum && (
+          {esMesActual && currentDiaEq && (
             <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-              Hoy es día {diaActual} del mes
+              Velocidad actual: {formatCurrency(projectedVelocity)}/día
             </div>
           )}
         </div>
 
         <InfoButton onClick={() => openModal("diaEquilibrio")} />
 
-        {metaAlcanzada && (
+        {currentMetaAlcanzada && (
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center",
             background: "rgba(45,106,79,0.15)", padding: "8px 10px",

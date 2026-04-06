@@ -78,9 +78,9 @@ export async function GET(request) {
         margenRentabilidad: normalizePercent(raw.margenRentabilidad),
         margenSeguridad:    normalizePercent(raw.margenSeguridad),
         diaEquilibrio:      raw.diaEquilibrio,
-        // B24 viene como decimal 0-1 (ej: 0.85 = 85%) — NO usar normalizePercent
         indiceCobrabilidad: parseSheetNumber(raw.indiceCobrabilidad),
         amortizaciones:     parseSheetNumber(raw.amortizaciones),
+        ratioMargenReal:    parseSheetNumber(raw.ratioMargenReal),
         prev: rawPrev ? {
           ventasTotales:   parseSheetNumber(rawPrev.ventasTotales),
           costosFijos:     parseSheetNumber(rawPrev.costosFijosBase),
