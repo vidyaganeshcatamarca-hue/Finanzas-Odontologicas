@@ -94,7 +94,7 @@ export default function SignosVitales() {
     <div style={{ position: "relative" }}>
       {/* Marcador de Versión para Verificación (VISIBLE) */}
       <div style={{ position: "absolute", top: "4px", right: "12px", fontSize: "0.6rem", color: "var(--color-primary-light)", opacity: 0.8, fontWeight: 700, zIndex: 10 }}>
-        ENGINE V2.0.5
+        ENGINE V2.0.6
       </div>
 
       {/* ── [NUEVO] Diagnóstico Dinámico PRIORITARIO ── */}
