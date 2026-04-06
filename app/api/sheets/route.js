@@ -59,8 +59,8 @@ export async function GET(request) {
         );
       }
 
-      // Costos: B7=costosFijos, B8=costosTotales → variables = total - fijos
       const costosFijosRaw    = parseSheetNumber(raw.costosFijosBase);
+      const honorariosRaw     = parseSheetNumber(raw.honorariosLaura);
       const costosTotalesRaw  = parseSheetNumber(raw.costosTotales);
       const costosVariablesCalc = Math.max(costosTotalesRaw - costosFijosRaw, 0);
 
@@ -68,9 +68,10 @@ export async function GET(request) {
         ventasTotales:      parseSheetNumber(raw.ventasTotales),
         costosVariables:    costosVariablesCalc,          // calculado
         costosFijos:        costosFijosRaw,               // B7
+        honorariosLaura:    honorariosRaw,                // B11
+        costosFijosTotales: costosFijosRaw + honorariosRaw, // B7 + B11
         costosTotales:      costosTotalesRaw,             // B8
         utilidadOperativa:  parseSheetNumber(raw.utilidadOperativa),
-        honorariosLaura:    parseSheetNumber(raw.honorariosLaura),
         ingresosReales:     parseSheetNumber(raw.ingresosReales),
         egresosReales:      parseSheetNumber(raw.egresosReales),
         flujoCajaNeto:      parseSheetNumber(raw.flujoCajaNeto),
@@ -78,14 +79,17 @@ export async function GET(request) {
         margenRentabilidad: normalizePercent(raw.margenRentabilidad),
         margenSeguridad:    normalizePercent(raw.margenSeguridad),
         diaEquilibrio:      raw.diaEquilibrio,
-        // B24 viene como decimal 0-1 (ej: 0.85 = 85%) — NO usar normalizePercent
         indiceCobrabilidad: parseSheetNumber(raw.indiceCobrabilidad),
         amortizaciones:     parseSheetNumber(raw.amortizaciones),
+        ratioMargenReferencia: normalizePercent(raw.ratioMargenReferencia), // AB67
         prev: rawPrev ? {
           ventasTotales:   parseSheetNumber(rawPrev.ventasTotales),
           costosFijos:     parseSheetNumber(rawPrev.costosFijosBase),
+          honorariosLaura: parseSheetNumber(rawPrev.honorariosLaura),
+          costosFijosTotales: parseSheetNumber(rawPrev.costosFijosBase) + parseSheetNumber(rawPrev.honorariosLaura),
           puntoEquilibrio: parseSheetNumber(rawPrev.puntoEquilibrio),
           margenSeguridad: normalizePercent(rawPrev.margenSeguridad),
+          ratioMargenReferencia: normalizePercent(rawPrev.ratioMargenReferencia), // AB67 de mes anterior
         } : null,
         sheetName, prevSheetName, year, month,
         fetchedAt: new Date().toISOString(),

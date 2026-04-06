@@ -43,28 +43,52 @@ export function AppProvider({ children }) {
   useEffect(() => { kpisRef.current = kpis; }, [kpis]);
   useEffect(() => { tratRef.current = tratamientos; }, [tratamientos]);
 
-  // ── Accrual Engine (solo mes actual) ──────────────────────
+  // ── Tiempo y Contexto ──────────────────────────────────────
   const diaActual      = getCurrentDayOfMonth();
   const diasTotalesMes = getDaysInMonth(selectedYear, selectedMonth);
   const esMesActual    = isCurrentMonth(selectedYear, selectedMonth);
 
-  // Costo Fijo de Referencia = costos fijos del mes anterior (desde kpis.prev)
-  const costoFijoReferencia = kpis?.prev?.costosFijos ?? 0;
+  // ── Motor de Cálculo Dinámico (Solo mes actual) ─────────────
+  // A. Referencias del mes pasado
+  const costoFijoReferencia = kpis?.prev?.costosFijosTotales ?? 0;
+  const ratioReferencia     = kpis?.prev?.ratioMargenReferencia ?? 0;
 
+  // B. Punto de Equilibrio Proyectado
+  const peTotalMensual = ratioReferencia > 0 
+    ? costoFijoReferencia / ratioReferencia 
+    : (kpis?.puntoEquilibrio ?? 0);
+
+  const peDinamico = peTotalMensual * (diaActual / diasTotalesMes);
+
+  // C. Margen de Seguridad Real
+  const ventasPTD = kpis?.ventasTotales ?? 0;
+  const msReal = ventasPTD > 0 
+    ? (ventasPTD - peDinamico) / ventasPTD 
+    : 0;
+
+  // ── Variables para la UI ───────────────────────────────────
+  const estadoSemaforo = esMesActual
+    ? (ventasPTD >= peDinamico ? "SUCCESS" : "DANGER")
+    : (kpis?.margenSeguridad > 0 ? "SUCCESS" : "DANGER");
+
+  const isDangerMS = esMesActual ? msReal < 0.20 : (kpis?.margenSeguridad < 0.20);
+
+  const insightPE = `Doctora, al día ${diaActual}, su meta de facturación para cubrir costos es de ${Math.round(peDinamico).toLocaleString("es-PY")}.`;
+  const insightMS = `Su Margen de Seguridad actual es del ${(msReal * 100).toFixed(2)}%. Esto indica que sus ventas pueden caer un ${(msReal * 100).toFixed(2)}% antes de que la clínica empiece a perder dinero hoy.`;
+
+  // ── Antiguos cálculos de Accrual (compatibilidad) ──────────
   const costoFijoDevengado = esMesActual
     ? calcCostoFijoDevengado(costoFijoReferencia, diaActual, diasTotalesMes)
     : kpis?.costosFijos ?? 0;
 
   const factorProrrateo = calcFactorProrrateo(diaActual, diasTotalesMes);
 
-  // ── Utilidad ajustada (con accrual en mes actual) ─────────
   const utilidadAjustada = esMesActual && kpis
     ? (kpis.ventasTotales ?? 0) - (kpis.costosVariables ?? 0) - costoFijoDevengado
     : kpis?.utilidadOperativa ?? 0;
 
-  // ── Estados semáforo ───────────────────────────────────────
   const estadoGlobal = kpis
-    ? calcEstadoGlobal(kpis.margenSeguridad)
+    ? calcEstadoGlobal(esMesActual ? msReal : kpis.margenSeguridad)
     : null;
 
   const estadoLiquidez = kpis
@@ -75,9 +99,9 @@ export function AppProvider({ children }) {
     ? parseDiaEquilibrio(kpis.diaEquilibrio)
     : null;
 
-  const metaAlcanzada = diaEquilibrioNum
-    ? diaActual >= diaEquilibrioNum
-    : false;
+  const metaAlcanzada = esMesActual 
+    ? (ventasPTD >= peDinamico)
+    : (diaEquilibrioNum ? diaActual >= diaEquilibrioNum : false);
 
   // ── Fetch de datos principales ─────────────────────────────
   const fetchKPIs = useCallback(async (year, month) => {
@@ -189,6 +213,13 @@ export function AppProvider({ children }) {
         estadoLiquidez,
         diaEquilibrioNum,
         metaAlcanzada,
+        // [NUEVO] Motor Dinámico
+        peDinamico,
+        msReal,
+        insightPE,
+        insightMS,
+        estadoSemaforo,
+        isDangerMS,
         // Acciones
         refetch,
         fetchTratamientosForCurrentMonth,

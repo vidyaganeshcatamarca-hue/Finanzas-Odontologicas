@@ -22,6 +22,9 @@ export default function SignosVitales() {
     utilidadAjustada, esMesActual,
     diaActual, diaEquilibrioNum, metaAlcanzada,
     estadoGlobal,
+    // [NUEVO] Motor Dinámico
+    peDinamico, msReal, insightPE, insightMS,
+    estadoSemaforo
   } = useApp();
 
   const [modalKey, setModalKey] = useState(null);
@@ -38,7 +41,7 @@ export default function SignosVitales() {
   // ── Variaciones PTD ─────────────────────────────────────────
   const varVentas = prev.ventasTotales ? formatVariation(kpis.ventasTotales, prev.ventasTotales) : null;
   const varUtilidad = prev.ventasTotales ? formatVariation(utilidadAjustada, prev.ventasTotales * (prev.margenSeguridad ?? 0)) : null;
-  const varMS = prev.margenSeguridad ? formatVariation(kpis.margenSeguridad, prev.margenSeguridad) : null;
+  const varMS = prev.margenSeguridad ? formatVariation(esMesActual ? msReal : kpis.margenSeguridad, prev.margenSeguridad) : null;
 
   // ── Color Margen Rentabilidad ────────────────────────────────
   const mrColor = kpis.margenRentabilidad < thresholds.margenRentabilidad.critico
@@ -46,6 +49,20 @@ export default function SignosVitales() {
 
   // ── Insights Activos ─────────────────────────────────────────
   const activeInsights = [];
+
+  // [NUEVO] Diagnóstico Dinámico (Prioridad)
+  if (esMesActual) {
+    activeInsights.push({ 
+      titulo: "Meta de Facturación Hoy", 
+      texto: insightPE, 
+      color: estadoSemaforo === "DANGER" ? "var(--color-danger)" : "var(--color-success)" 
+    });
+    activeInsights.push({ 
+      titulo: "Estado del Margen", 
+      texto: insightMS, 
+      color: msReal < 0.20 ? "var(--color-warning)" : "var(--color-success)" 
+    });
+  }
 
   // A. Ineficiencia operativa
   if (prev.ventasTotales && prev.puntoEquilibrio &&
@@ -109,11 +126,13 @@ export default function SignosVitales() {
         {/* 4. Margen de Seguridad — Gauge */}
         <KPICard
           label="Margen de Seguridad"
+          value={formatPercentSmart(esMesActual ? msReal : kpis.margenSeguridad)}
           tooltip={tooltips.margenSeguridad}
-          accent={estadoGlobal === "critico" ? "danger" : estadoGlobal === "precaucion" ? "warning" : "success"}
+          accent={estadoSemaforo === "DANGER" ? "danger" : "success"}
+          variation={varMS}
           fullWidth={false}
         >
-          <GaugeChart value={kpis.margenSeguridad} />
+          <GaugeChart value={esMesActual ? msReal : kpis.margenSeguridad} />
         </KPICard>
 
         {/* 5. Índice de Cobrabilidad — Donut */}
@@ -133,11 +152,18 @@ export default function SignosVitales() {
       {/* ── Punto de Equilibrio ── */}
       <div className="card" style={{ marginBottom: "12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div className="card-label">Punto de Equilibrio</div>
-          <div className="card-value-sm" style={{ color: "var(--color-primary-light)" }}>
-            {formatCurrency(kpis.puntoEquilibrio)}
+          <div className="card-label">
+            {esMesActual ? "Meta Acumulada (Punto Equilibrio Hoy)" : "Punto de Equilibrio Mensual"}
           </div>
-          {kpis.prev?.puntoEquilibrio && (() => {
+          <div className="card-value-sm" style={{ color: estadoSemaforo === "DANGER" ? "var(--color-danger)" : "var(--color-success-light)" }}>
+            {formatCurrency(esMesActual ? peDinamico : kpis.puntoEquilibrio)}
+          </div>
+          {esMesActual && (
+            <div style={{ fontSize: "0.7rem", marginTop: "3px", color: "var(--text-muted)" }}>
+              Objetivo total mes: {formatCurrency(kpis.puntoEquilibrio)}
+            </div>
+          )}
+          {!esMesActual && kpis.prev?.puntoEquilibrio && (() => {
             const v = formatVariation(kpis.puntoEquilibrio, kpis.prev.puntoEquilibrio);
             return (
               <div style={{ fontSize: "0.7rem", marginTop: "3px", color: v.direction === "up" ? "var(--color-success-light)" : v.direction === "down" ? "var(--color-danger)" : "var(--text-muted)", fontWeight: 600 }}>
