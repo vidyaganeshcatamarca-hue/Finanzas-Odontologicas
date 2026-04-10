@@ -92,11 +92,12 @@ export function AppProvider({ children }) {
   // Día de Equilibrio Dinámico Proyectado
   const projectedVelocity = ventasActualesPTD / (diaActual || 1);
   const currentDiaEq = esMesActual
-    ? (projectedVelocity > 0 ? Math.max(1, Math.ceil(peTotalMensual / projectedVelocity)) : null)
+    ? (projectedVelocity > 0 ? Math.ceil(peTotalMensual / projectedVelocity) : null)
     : diaEquilibrioNum;
 
+  // Meta Alcanzada: Ahora es Dinámica. Si ya pasaste el PE de hoy, la meta está ALCANZADA.
   const currentMetaAlcanzada = esMesActual 
-    ? (currentDiaEq && diaActual >= currentDiaEq) 
+    ? (ventasActualesPTD >= peDinamico) 
     : (diaEquilibrioNum && diaActual >= diaEquilibrioNum);
 
   // ── Fetch de datos principales ─────────────────────────────
