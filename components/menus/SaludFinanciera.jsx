@@ -57,9 +57,7 @@ export default function SaludFinanciera() {
   if (honorariosLaura > utilidadAjustada) activeInsights.push(insights.sostenibilidadDueno);
   if (egresosReales > ingresosReales)     activeInsights.push(insights.burnRate);
 
-  const totalCalle = dineroCalle.reduce((s, d) => s + d.calle, 0);
-  const totalVentasCalle = dineroCalle.reduce((s, d) => s + d.ventas, 0);
-  const pctCalle = totalVentasCalle > 0 ? totalCalle / totalVentasCalle : 0;
+
 
   return (
     <div>
