@@ -20,10 +20,12 @@ export default function SignosVitales() {
   const {
     kpis, loading, error,
     utilidadAjustada, esMesActual,
-    diaActual, diaEquilibrioNum, metaAlcanzada,
-    estadoGlobal: estadoGlobalBase,
+    diaActual, diaEquilibrioNum, 
+    metaAlcanzada: currentMetaAlcanzada,
+    estadoGlobal,
     costoFijoReferencia, diasTotalesMes,
     peDinamico, msCalculado, currentDiaEq,
+    projectedVelocity,
   } = useApp();
 
   const [modalKey, setModalKey] = useState(null);
