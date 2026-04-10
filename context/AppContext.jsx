@@ -48,8 +48,8 @@ export function AppProvider({ children }) {
   const diasTotalesMes = getDaysInMonth(selectedYear, selectedMonth);
   const esMesActual    = isCurrentMonth(selectedYear, selectedMonth);
 
-  // Costo Fijo de Referencia = costos fijos del mes anterior (desde kpis.prev)
-  const costoFijoReferencia = kpis?.prev?.costosFijos ?? 0;
+  // Costo Fijo de Referencia = Promedio histórico (hasta 3 meses) desde kpis.costoFijoPromedio
+  const costoFijoReferencia = kpis?.costoFijoPromedio ?? 0;
 
   const costoFijoDevengado = esMesActual
     ? calcCostoFijoDevengado(costoFijoReferencia, diaActual, diasTotalesMes)

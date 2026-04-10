@@ -41,15 +41,25 @@ export async function GET(request) {
     // ── KPIs principales ─────────────────────────────────────
     if (type === "kpis") {
       // [OPTIMIZACIÓN 1: PARALLEL FETCHING]
-      // Ejecutamos las 2 llamadas en paralelo para reducir tiempo de respuesta
-      const prevMonth = month === 0 ? 11 : month - 1;
-      const prevYear  = month === 0 ? year - 1 : year;
-      const prevSheetName = getSheetName(prevYear, prevMonth);
+      const prev1Month = month === 0 ? 11 : month - 1;
+      const prev1Year  = month === 0 ? year - 1 : year;
+      
+      const prev2Month = prev1Month === 0 ? 11 : prev1Month - 1;
+      const prev2Year  = prev1Month === 0 ? prev1Year - 1 : prev1Year;
+      
+      const prev3Month = prev2Month === 0 ? 11 : prev2Month - 1;
+      const prev3Year  = prev2Month === 0 ? prev2Year - 1 : prev2Year;
+
+      const prev1SheetName = getSheetName(prev1Year, prev1Month);
+      const prev2SheetName = getSheetName(prev2Year, prev2Month);
+      const prev3SheetName = getSheetName(prev3Year, prev3Month);
       
       // [OPTIMIZACIÓN 1 + 3: PARALLEL FETCHING + CACHE]
-      const [raw, rawPrev] = await Promise.all([
+      const [raw, rawPrev1, rawPrev2, rawPrev3] = await Promise.all([
         getCachedKPIs(year, month, () => getMonthlyKPIs(sheetName)),
-        getCachedKPIs(prevYear, prevMonth, () => getMonthlyKPIs(prevSheetName)),
+        getCachedKPIs(prev1Year, prev1Month, () => getMonthlyKPIs(prev1SheetName)),
+        getCachedKPIs(prev2Year, prev2Month, () => getMonthlyKPIs(prev2SheetName)),
+        getCachedKPIs(prev3Year, prev3Month, () => getMonthlyKPIs(prev3SheetName)),
       ]);
 
       if (!raw) {
@@ -63,6 +73,20 @@ export async function GET(request) {
       const costosFijosRaw    = parseSheetNumber(raw.costosFijosBase);
       const costosTotalesRaw  = parseSheetNumber(raw.costosTotales);
       const costosVariablesCalc = Math.max(costosTotalesRaw - costosFijosRaw, 0);
+
+      // Promediado inteligente Fix (3 meses)
+      let sumCostos = 0;
+      let countCostos = 0;
+      [rawPrev1, rawPrev2, rawPrev3].forEach(p => {
+        if (p) {
+          const costo = parseSheetNumber(p.costosFijosBase);
+          if (costo > 0) {
+            sumCostos += costo;
+            countCostos++;
+          }
+        }
+      });
+      const costoFijoPromedio = countCostos > 0 ? (sumCostos / countCostos) : 0;
 
       const kpis = {
         ventasTotales:      parseSheetNumber(raw.ventasTotales),
@@ -81,13 +105,14 @@ export async function GET(request) {
         indiceCobrabilidad: parseSheetNumber(raw.indiceCobrabilidad),
         amortizaciones:     parseSheetNumber(raw.amortizaciones),
         ratioMargenReal:    parseSheetNumber(raw.ratioMargenReal),
-        prev: rawPrev ? {
-          ventasTotales:   parseSheetNumber(rawPrev.ventasTotales),
-          costosFijos:     parseSheetNumber(rawPrev.costosFijosBase),
-          puntoEquilibrio: parseSheetNumber(rawPrev.puntoEquilibrio),
-          margenSeguridad: normalizePercent(rawPrev.margenSeguridad),
+        costoFijoPromedio:  costoFijoPromedio,
+        prev: rawPrev1 ? {
+          ventasTotales:   parseSheetNumber(rawPrev1.ventasTotales),
+          costosFijos:     parseSheetNumber(rawPrev1.costosFijosBase),
+          puntoEquilibrio: parseSheetNumber(rawPrev1.puntoEquilibrio),
+          margenSeguridad: normalizePercent(rawPrev1.margenSeguridad),
         } : null,
-        sheetName, prevSheetName, year, month,
+        sheetName, prevSheetName: prev1SheetName, year, month,
         fetchedAt: new Date().toISOString(),
       };
 
