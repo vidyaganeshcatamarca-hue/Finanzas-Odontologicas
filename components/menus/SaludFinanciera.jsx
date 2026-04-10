@@ -12,6 +12,14 @@ import TooltipModal from "@/components/ui/TooltipModal";
 
 const { tooltips, insights, thresholds } = APP_CONFIG;
 
+const PERIODOS = [
+  { label: "Mes actual",   meses: 1 },
+  { label: "Últ. 2 meses", meses: 2 },
+  { label: "Últ. 3 meses", meses: 3 },
+  { label: "6 meses",      meses: 6 },
+  { label: "12 meses",     meses: 12 },
+];
+
 export default function SaludFinanciera() {
   const {
     kpis, loading, error,
@@ -21,6 +29,34 @@ export default function SaludFinanciera() {
 
   const [showHonorariosModal, setShowHonorariosModal] = useState(false);
   const [subTab, setSubTab]             = useState("flujo"); // "flujo" | "gastos"
+  const [periodoCalle, setPeriodoCalle] = useState(1);
+  const [dineroCalle, setDineroCalle]   = useState([]);
+  const [loadingCalle, setLoadingCalle] = useState(false);
+
+  const fetchCalle = useCallback(async (meses) => {
+    setLoadingCalle(true);
+    const results = [];
+    for (let i = 0; i < meses; i++) {
+      let m = selectedMonth - i;
+      let y = selectedYear;
+      if (m < 0) { m += 12; y -= 1; }
+      try {
+        const res  = await fetch(`/api/sheets?type=kpis&year=${y}&month=${m}`);
+        const data = await res.json();
+        if (res.ok && data.ventasTotales != null) {
+          results.push({
+            label:  `${APP_CONFIG.meses?.[m] ?? m} ${y}`,
+            calle:  (data.ventasTotales ?? 0) - (data.ingresosReales ?? 0),
+            ventas: data.ventasTotales ?? 0,
+          });
+        }
+      } catch { /* ignorar mes no disponible */ }
+    }
+    setDineroCalle(results.reverse());
+    setLoadingCalle(false);
+  }, [selectedYear, selectedMonth]);
+
+  useEffect(() => { fetchCalle(periodoCalle); }, [periodoCalle, fetchCalle]);
 
   if (loading) return <><SkeletonChart height={220} /><SkeletonGrid /></>;
   if (error)   return <ErrorState message={error} />;
@@ -57,7 +93,9 @@ export default function SaludFinanciera() {
   if (honorariosLaura > utilidadAjustada) activeInsights.push(insights.sostenibilidadDueno);
   if (egresosReales > ingresosReales)     activeInsights.push(insights.burnRate);
 
-
+  const totalCalle = dineroCalle.reduce((s, d) => s + d.calle, 0);
+  const totalVentasCalle = dineroCalle.reduce((s, d) => s + d.ventas, 0);
+  const pctCalle = totalVentasCalle > 0 ? totalCalle / totalVentasCalle : 0;
 
   return (
     <div>
@@ -147,28 +185,58 @@ export default function SaludFinanciera() {
           )}
 
           {/* Dinero en la Calle */}
-          <div className="section-title">Ventas Financiadas (Calle)</div>
+          <div className="section-title">Dinero Financiado en la Calle</div>
           <div className="card" style={{ marginBottom: "16px" }}>
-            <div style={{ marginBottom: "10px" }}>
-              <div className="card-label">Por cobrar en {APP_CONFIG.meses[selectedMonth]}</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: (indiceCobrabilidad ?? 0) < 0.7 ? "var(--color-danger)" : "var(--color-warning)" }}>
-                {formatCurrency((ventasTotales ?? 0) - (ingresosReales ?? 0))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <div>
+                <div className="card-label">Ventas no cobradas (período)</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 800, color: pctCalle > 0.3 ? "var(--color-danger)" : "var(--color-warning)" }}>
+                  {formatCurrency(totalCalle)}
+                </div>
               </div>
+              <select
+                value={periodoCalle}
+                onChange={(e) => setPeriodoCalle(Number(e.target.value))}
+                style={{
+                  background: "var(--bg-hover)", border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-sm)", padding: "6px 10px",
+                  color: "var(--text-primary)", fontSize: "0.75rem", cursor: "pointer",
+                }}
+              >
+                {PERIODOS.map((p) => (
+                  <option key={p.meses} value={p.meses}>{p.label}</option>
+                ))}
+              </select>
             </div>
 
             <div style={{ marginBottom: "8px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--text-secondary)", marginBottom: "4px" }}>
-                <span>Vendido sin cobrar este mes</span>
-                <span>{((1 - (indiceCobrabilidad ?? 0)) * 100).toFixed(1)}% del total</span>
+                <span>Vendido sin cobrar</span>
+                <span>{(pctCalle * 100).toFixed(1)}% del total</span>
               </div>
               <div style={{ height: "8px", background: "var(--bg-hover)", borderRadius: "4px", overflow: "hidden" }}>
                 <div style={{
-                  width: `${Math.min((1 - (indiceCobrabilidad ?? 0)) * 100, 100)}%`, height: "100%",
-                  background: (indiceCobrabilidad ?? 0) < 0.7 ? "var(--color-danger)" : "var(--color-warning)",
+                  width: `${Math.min(pctCalle * 100, 100)}%`, height: "100%",
+                  background: pctCalle > 0.3 ? "var(--color-danger)" : "var(--color-warning)",
                   borderRadius: "4px", transition: "width 0.6s ease",
                 }} />
               </div>
             </div>
+
+            {loadingCalle ? (
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center", padding: "8px" }}>Cargando...</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
+                {dineroCalle.map((d, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
+                    <span style={{ color: "var(--text-secondary)" }}>{d.label}</span>
+                    <span style={{ fontWeight: 600, color: d.calle > 0 ? "var(--color-warning)" : "var(--color-success-light)" }}>
+                      {d.calle > 0 ? `${formatCurrency(d.calle)} sin cobrar` : "✅ Cobrado"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Papel vs Realidad */}
