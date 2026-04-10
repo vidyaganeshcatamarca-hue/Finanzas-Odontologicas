@@ -22,7 +22,8 @@ export default function SignosVitales() {
     utilidadAjustada, esMesActual,
     diaActual, diaEquilibrioNum, metaAlcanzada,
     estadoGlobal: estadoGlobalBase,
-    costoFijoReferencia, diasTotalesMes
+    costoFijoReferencia, diasTotalesMes,
+    peDinamico, msCalculado, currentDiaEq,
   } = useApp();
 
   const [modalKey, setModalKey] = useState(null);
