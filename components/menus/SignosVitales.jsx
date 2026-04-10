@@ -93,7 +93,7 @@ export default function SignosVitales() {
       return `Proyectado: Día ${currentDiaEq}`;
     }
     const raw = kpis.diaEquilibrio;
-    if (!raw) return "—";
+    if (!raw || String(raw).includes("#N/A")) return "No se alcanzó";
     const n = parseDiaEquilibrio(raw);
     return n ? `Día ${n}` : String(raw);
   })();
