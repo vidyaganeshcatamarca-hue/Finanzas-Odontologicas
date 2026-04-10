@@ -37,7 +37,10 @@ export default function SignosVitales() {
   const prev = kpis.prev ?? {};
 
   // ── MOTOR DE CÁLCULO DINÁMICO (PE Y MS) ───────────────────
-  const ratioMargenReal = kpis.ratioMargenReal || 0.4287; // AB67
+  // Normalización: si AB67 viene como 27.59 en lugar de 0.2759
+  const ratioRaw = kpis.ratioMargenReal || 0.4287;
+  const ratioMargenReal = ratioRaw > 1 ? ratioRaw / 100 : ratioRaw;
+  
   const ventasActualesPTD = kpis?.ventasTotales || 0;
 
   const peTotalMensual = ratioMargenReal > 0 ? costoFijoReferencia / ratioMargenReal : 0;
@@ -137,9 +140,10 @@ export default function SignosVitales() {
 
         {/* 2. Utilidad Operativa */}
         <KPICard
-          label={esMesActual ? "Utilidad" : "Utilidad Operativa"}
-          value={formatCurrency(utilidadAjustada)}
-          valueColor={utilidadAjustada >= 0 ? "success" : "danger"}
+          label={esMesActual ? "Utilidad (Real a la fecha)" : "Utilidad Operativa"}
+          value={formatCurrency(kpis.utilidadOperativa)}
+          valueColor={kpis.utilidadOperativa >= 0 ? "success" : "danger"}
+          subtitle={esMesActual ? `Progresiva: ${formatCurrency(utilidadAjustada)}` : null}
           variation={varUtilidad}
           tooltip={tooltips.utilidadOperativa}
           accent={utilidadAjustada >= 0 ? "success" : "danger"}

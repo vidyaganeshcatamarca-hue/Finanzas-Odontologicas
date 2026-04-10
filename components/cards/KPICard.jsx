@@ -20,6 +20,7 @@ export default function KPICard({
   label,
   value,
   valueColor,
+  subtitle,
   variation,
   tooltip,
   accent = "primary",
@@ -45,6 +46,12 @@ export default function KPICard({
 
         {value !== undefined && (
           <div className={`card-value ${valueColor ?? ""}`}>{value}</div>
+        )}
+
+        {subtitle && (
+          <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginTop: "-4px", marginBottom: "4px", fontWeight: 500 }}>
+            {subtitle}
+          </div>
         )}
 
         {variation && variation.direction !== "neutral" && (
