@@ -47,17 +47,31 @@ export default function Header() {
           value={selectValue}
           onChange={handleMonthChange}
         >
-          {years.map((yr) =>
-            MESES_NAMES.map((mes, idx) => {
-              const sheetName = `${mes} ${yr}`;
-              const exists = availableSheets.length === 0 || availableSheets.includes(sheetName);
-              return (
-                <option key={`${yr}-${idx}`} value={`${yr}-${idx}`} disabled={!exists}>
-                  {mes} {yr}
-                </option>
-              );
-            })
-          )}
+          {(() => {
+            const opts = [];
+            const now = new Date();
+            const curY = now.getFullYear();
+            const curM = now.getMonth();
+
+            // Generamos desde el año actual hasta el anterior
+            for (let yr = curY; yr >= curY - 1; yr--) {
+              for (let idx = 11; idx >= 0; idx--) {
+                // Si es el año actual, no mostrar meses futuros
+                if (yr === curY && idx > curM) continue;
+
+                const mes = MESES_NAMES[idx];
+                const sheetName = `${mes} ${yr}`;
+                const exists = availableSheets.length === 0 || availableSheets.includes(sheetName);
+
+                opts.push(
+                  <option key={`${yr}-${idx}`} value={`${yr}-${idx}`} disabled={!exists}>
+                    {mes} {yr}
+                  </option>
+                );
+              }
+            }
+            return opts;
+          })()}
         </select>
 
         <button
