@@ -64,6 +64,7 @@ export default function Estrategia() {
     selectedYear, selectedMonth,
     diaActual, diasTotalesMes, esMesActual,
     utilidadAjustada, costoFijoReferencia,
+    peDinamico, msCalculado,
   } = useApp();
 
   const [heatmapReal, setHeatmapReal] = useState(null);
@@ -108,7 +109,8 @@ export default function Estrategia() {
     : null;
 
   const ventasProyectadas = calcProyeccionCierre(ventasPTD, diaActual, diasTotalesMes, tasaCrecimiento);
-  const estadoProyeccion  = calcEstadoProyeccion(ventasProyectadas, puntoEquilibrio);
+  const currentPE = peDinamico;
+  const estadoProyeccion  = calcEstadoProyeccion(ventasProyectadas, currentPE);
 
   const semaforo = {
     en_camino:     { color: colors.success, emoji: "🟢", label: "EN CAMINO",      desc: "Proyección Excelente: El mes cerrará con un margen de seguridad sólido." },
@@ -116,7 +118,7 @@ export default function Estrategia() {
     alerta_perdida:{ color: colors.danger,  emoji: "🔴", label: "ALERTA DE PÉRDIDA", desc: "Pronóstico Crítico: Al ritmo actual, el mes cerrará por debajo de los costos." },
   }[estadoProyeccion];
 
-  const refLineValue = puntoEquilibrio;
+  const refLineValue = currentPE;
   const refLineLabel = "P.E.";
 
   const chartData = buildChartData(
@@ -147,7 +149,7 @@ export default function Estrategia() {
   const minMargin = activeDailyMargins.length > 0 ? Math.min(...activeDailyMargins) : 1;
 
   const diaEqProyectado = ventasPTD > 0
-    ? Math.ceil(puntoEquilibrio / (ventasPTD / diaActual))
+    ? Math.ceil(currentPE / (ventasPTD / diaActual))
     : null;
   const diasRentabilidad = diaEqProyectado
     ? Math.max(diasTotalesMes - diaEqProyectado, 0)

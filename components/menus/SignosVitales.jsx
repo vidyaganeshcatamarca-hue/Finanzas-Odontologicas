@@ -34,45 +34,17 @@ export default function SignosVitales() {
   if (error) return <ErrorState message={error} />;
   if (!kpis) return null;
 
-  const prev = kpis.prev ?? {};
-
-  // ── MOTOR DE CÁLCULO DINÁMICO (PE Y MS) ───────────────────
-  // Normalización: si AB67 viene como 27.59 en lugar de 0.2759
-  const ratioRaw = kpis.ratioMargenReal || 0.4287;
-  const ratioMargenReal = ratioRaw > 1 ? ratioRaw / 100 : ratioRaw;
-  
-  const ventasActualesPTD = kpis?.ventasTotales || 0;
-
-  const peTotalMensual = ratioMargenReal > 0 ? costoFijoReferencia / ratioMargenReal : 0;
-  const peDinamico = esMesActual ? peTotalMensual * (diaActual / (diasTotalesMes || 30)) : (kpis?.puntoEquilibrio || 0);
-
-  const msCalculado = esMesActual 
-    ? (ventasActualesPTD > 0 ? (ventasActualesPTD - peDinamico) / ventasActualesPTD : 0) 
-    : (kpis?.margenSeguridad || 0);
-
-  const currentPE = esMesActual ? peDinamico : kpis.puntoEquilibrio;
-  const currentMS = esMesActual ? msCalculado : kpis.margenSeguridad;
+  // Usamos los valores calculados centralmente en AppContext
+  const currentPE = peDinamico;
+  const currentMS = msCalculado;
 
   // 1. Margen de Rentabilidad Dinámico
   const currentMR = esMesActual 
-    ? (ventasActualesPTD > 0 ? utilidadAjustada / ventasActualesPTD : 0)
+    ? (kpis.ventasTotales > 0 ? utilidadAjustada / kpis.ventasTotales : 0)
     : kpis.margenRentabilidad;
 
-  // 2. Día de Equilibrio Dinámico Proyectado
-  const projectedVelocity = ventasActualesPTD / (diaActual || 1);
-  const currentDiaEq = esMesActual
-    ? (projectedVelocity > 0 ? Math.max(1, Math.ceil(peTotalMensual / projectedVelocity)) : null)
-    : diaEquilibrioNum;
-
-  const currentMetaAlcanzada = esMesActual 
-    ? (currentDiaEq && diaActual >= currentDiaEq) 
-    : metaAlcanzada;
-
-  const estadoGlobal = esMesActual
-    ? (ventasActualesPTD > peDinamico ? "success" : "danger")
-    : estadoGlobalBase;
-
   // ── Variaciones PTD ─────────────────────────────────────────
+  const prev = kpis.prev ?? {};
   const varVentas = prev.ventasTotales ? formatVariation(kpis.ventasTotales, prev.ventasTotales) : null;
   const varUtilidad = prev.ventasTotales ? formatVariation(utilidadAjustada, prev.ventasTotales * (prev.margenSeguridad ?? 0)) : null;
   const varMS = prev.margenSeguridad ? formatVariation(currentMS, prev.margenSeguridad) : null;

@@ -195,10 +195,10 @@ export default function Produccion() {
         </div>
 
         <ResponsiveContainer width="100%" height={260}>
-          <ScatterChart margin={{ top: 10, right: 10, left: 0, bottom: 4 }}>
-            <XAxis type="number" dataKey="x" name="Cantidad" hide />
-            <YAxis type="number" dataKey="y" name="Margen/u" hide />
-            <ZAxis type="number" dataKey="z" range={[50, 600]} />
+          <ScatterChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+            <XAxis type="number" dataKey="x" name="Cantidad" hide domain={['dataMin - 1', 'dataMax + 1']} />
+            <YAxis type="number" dataKey="y" name="Margen/u" hide domain={['dataMin - 1', 'dataMax + 1']} />
+            <ZAxis type="number" dataKey="z" range={[80, 800]} />
             <ReferenceLine x={medVolumen} stroke="var(--border)" strokeDasharray="3 3" />
             <ReferenceLine y={medMargen}  stroke="var(--border)" strokeDasharray="3 3" />
             <Scatter
@@ -221,8 +221,8 @@ export default function Produccion() {
         </ResponsiveContainer>
 
         {/* Ejes Visuales (Labels) */}
-        <div style={{ position: "absolute", bottom: "12px", right: "20px", fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700 }}>+ VOLUMEN</div>
-        <div style={{ position: "absolute", top: "40px", left: "12px", fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, writingMode: "vertical-lr", transform: "rotate(180deg)" }}>+ MARGEN UNITARIO</div>
+        <div style={{ position: "absolute", bottom: "10px", right: "12px", fontSize: "0.55rem", color: "var(--text-muted)", fontWeight: 700, padding: "2px 6px", background: "rgba(10,10,20,0.5)", borderRadius: "4px" }}>+ VOLUMEN</div>
+        <div style={{ position: "absolute", top: "12px", left: "10px", fontSize: "0.55rem", color: "var(--text-muted)", fontWeight: 700, writingMode: "vertical-lr", transform: "rotate(180deg)", padding: "6px 2px", background: "rgba(10,10,20,0.5)", borderRadius: "4px" }}>+ MARGEN UNITARIO</div>
 
         {/* Globo de Detalle (al centro o sobre el chart) */}
         {selectedBubble && detailBubble && (

@@ -62,9 +62,23 @@ export function AppProvider({ children }) {
     ? (kpis.ventasTotales ?? 0) - (kpis.costosVariables ?? 0) - costoFijoDevengado
     : kpis?.utilidadOperativa ?? 0;
 
+  // ── MOTOR DE CÁLCULO DINÁMICO (PE Y MS GLOBAL) ───────────
+  const ratioRaw = kpis?.ratioMargenReal || 0.4287;
+  const ratioMargenReal = ratioRaw > 1 ? ratioRaw / 100 : ratioRaw;
+  const ventasActualesPTD = kpis?.ventasTotales || 0;
+
+  const peTotalMensual = ratioMargenReal > 0 ? costoFijoReferencia / ratioMargenReal : 0;
+  const peDinamico = esMesActual 
+    ? peTotalMensual * (diaActual / (diasTotalesMes || 30)) 
+    : (kpis?.puntoEquilibrio || 0);
+
+  const msCalculado = esMesActual
+    ? (ventasActualesPTD > 0 ? (ventasActualesPTD - peDinamico) / ventasActualesPTD : 0)
+    : (kpis?.margenSeguridad || 0);
+
   // ── Estados semáforo ───────────────────────────────────────
   const estadoGlobal = kpis
-    ? calcEstadoGlobal(kpis.margenSeguridad)
+    ? calcEstadoGlobal(msCalculado)
     : null;
 
   const estadoLiquidez = kpis
@@ -75,9 +89,15 @@ export function AppProvider({ children }) {
     ? parseDiaEquilibrio(kpis.diaEquilibrio)
     : null;
 
-  const metaAlcanzada = diaEquilibrioNum
-    ? diaActual >= diaEquilibrioNum
-    : false;
+  // Día de Equilibrio Dinámico Proyectado
+  const projectedVelocity = ventasActualesPTD / (diaActual || 1);
+  const currentDiaEq = esMesActual
+    ? (projectedVelocity > 0 ? Math.max(1, Math.ceil(peTotalMensual / projectedVelocity)) : null)
+    : diaEquilibrioNum;
+
+  const currentMetaAlcanzada = esMesActual 
+    ? (currentDiaEq && diaActual >= currentDiaEq) 
+    : (diaEquilibrioNum && diaActual >= diaEquilibrioNum);
 
   // ── Fetch de datos principales ─────────────────────────────
   const fetchKPIs = useCallback(async (year, month) => {
@@ -179,16 +199,20 @@ export function AppProvider({ children }) {
         // [OPTIMIZACIÓN 2: UI LOADING PATTERNS]
         isRefreshing,
         isRefreshingTrat,
-        // Accrual
+        // Accrual & Dinámico
         costoFijoDevengado,
         costoFijoReferencia,
         factorProrrateo,
         utilidadAjustada,
+        peDinamico,
+        msCalculado,
+        currentDiaEq,
+        ratioMargenReal,
         // Semáforos
         estadoGlobal,
         estadoLiquidez,
         diaEquilibrioNum,
-        metaAlcanzada,
+        metaAlcanzada: currentMetaAlcanzada,
         // Acciones
         refetch,
         fetchTratamientosForCurrentMonth,
