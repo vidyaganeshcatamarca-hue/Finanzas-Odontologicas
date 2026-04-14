@@ -236,8 +236,43 @@ export default function SignosVitales() {
         </div>
       )}
 
-      {/* ── Agente IA ── */}
-      <AgenteButton />
+      {/* ── Sección: Diagnóstico por IA ── */}
+      <div style={{ marginTop: "16px" }}>
+        {/* Título de sección */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: "8px",
+          marginBottom: "12px",
+        }}>
+          <div style={{
+            flex: 1, height: "1px",
+            background: "linear-gradient(90deg, transparent, var(--border))",
+          }} />
+          <span style={{
+            fontSize: "0.68rem", fontWeight: 600, letterSpacing: "1px",
+            color: "var(--text-muted)", textTransform: "uppercase",
+          }}>
+            Diagnóstico por IA
+          </span>
+          <div style={{
+            flex: 1, height: "1px",
+            background: "linear-gradient(90deg, var(--border), transparent)",
+          }} />
+        </div>
+
+        {/* Botones de Agentes */}
+        <AgenteButton />
+        <AgenteButton
+          label="Consultar Agente Wiki"
+          webhookUrl={APP_CONFIG.agente.webhookUrlWiki}
+        />
+
+        <div style={{
+          marginTop: "8px", textAlign: "center",
+          fontSize: "0.68rem", color: "var(--text-muted)",
+        }}>
+          Envía los datos financieros del período para análisis profundo
+        </div>
+      </div>
 
       {/* ── Modales ── */}
       {modal("puntoEquilibrio") && (

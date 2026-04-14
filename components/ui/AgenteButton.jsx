@@ -7,16 +7,20 @@ import { buildAgentePayload } from "@/lib/agente";
 import AgenteResponseModal from "@/components/ui/AgenteResponseModal";
 
 /**
- * AgenteButton — Botón "Consultar Agente IA"
+ * AgenteButton — Botón genérico para consultar agentes IA
  *
- * Maneja el ciclo completo:
- *   idle → loading → respuesta/error → modal
- *
- * Se integra al pie de la pantalla Signos Vitales.
+ * Props:
+ * - label: Texto del botón
+ * - webhookUrl: URL a la que enviar el payload
+ * - intent: "analisis" | "pregunta" (default "analisis")
  */
-export default function AgenteButton() {
+export default function AgenteButton({
+  label = "Consultar Agente IA",
+  webhookUrl = APP_CONFIG.agente.webhookUrl,
+  intent = "analisis"
+}) {
   const ctx = useApp();
-  const [estado, setEstado] = useState("idle"); // "idle" | "loading" | "error"
+  const [estado, setEstado] = useState("idle");
   const [respuesta, setRespuesta] = useState(null);
   const [timestamp, setTimestamp] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -30,8 +34,10 @@ export default function AgenteButton() {
 
     try {
       const payload = buildAgentePayload(ctx);
+      // Sobrescribir intención si se pasa por prop
+      payload.config_agente.intencion = intent;
 
-      const res = await fetch(APP_CONFIG.agente.webhookUrl, {
+      const res = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -56,29 +62,7 @@ export default function AgenteButton() {
 
   return (
     <>
-      {/* ── Sección del agente ──────────────────────────────────────────── */}
-      <div style={{ marginTop: "8px" }}>
-        {/* Título de sección */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: "8px",
-          marginBottom: "10px",
-        }}>
-          <div style={{
-            flex: 1, height: "1px",
-            background: "linear-gradient(90deg, transparent, var(--border))",
-          }} />
-          <span style={{
-            fontSize: "0.68rem", fontWeight: 600, letterSpacing: "1px",
-            color: "var(--text-muted)", textTransform: "uppercase",
-          }}>
-            Diagnóstico por IA
-          </span>
-          <div style={{
-            flex: 1, height: "1px",
-            background: "linear-gradient(90deg, var(--border), transparent)",
-          }} />
-        </div>
-
+      <div style={{ marginBottom: "8px" }}>
         {/* Botón principal */}
         <button
           onClick={handleConsultar}
@@ -118,61 +102,40 @@ export default function AgenteButton() {
           {isLoading ? (
             <>
               <SpinnerIcon />
-              Consultando al agente...
+              Consultando...
             </>
           ) : (
             <>
               <Bot size={18} />
-              Consultar Agente IA
+              {label}
               <Sparkles size={14} style={{ opacity: 0.7 }} />
             </>
           )}
         </button>
 
-        {/* Mensaje de loading informativo */}
-        {isLoading && (
-          <div style={{
-            marginTop: "10px", textAlign: "center",
-            fontSize: "0.72rem", color: "var(--text-muted)",
-            animation: "fadeIn 0.5s ease",
-          }}>
-            Analizando datos financieros con IA...
-          </div>
-        )}
-
         {/* Mensaje de error */}
         {isError && (
           <div style={{
-            marginTop: "10px",
-            padding: "10px 12px",
+            marginTop: "6px",
+            padding: "8px 12px",
             background: "rgba(230,57,70,0.1)",
             border: "1px solid rgba(230,57,70,0.3)",
             borderRadius: "var(--radius-sm)",
             display: "flex", alignItems: "center", gap: "8px",
-            fontSize: "0.78rem", color: "var(--color-danger)",
+            fontSize: "0.75rem", color: "var(--color-danger)",
           }}>
             <AlertCircle size={14} />
-            <span>{errorMsg}</span>
+            <span style={{ flex: 1 }}>{errorMsg}</span>
             <button
               onClick={() => setEstado("idle")}
               style={{
-                marginLeft: "auto", background: "none", border: "none",
+                background: "none", border: "none",
                 color: "var(--color-danger)", cursor: "pointer",
                 fontSize: "0.72rem", textDecoration: "underline",
               }}
             >
               Reintentar
             </button>
-          </div>
-        )}
-
-        {/* Nota aclaratoria */}
-        {!isLoading && !isError && (
-          <div style={{
-            marginTop: "8px", textAlign: "center",
-            fontSize: "0.68rem", color: "var(--text-muted)",
-          }}>
-            Envía los datos del período seleccionado para análisis profundo
           </div>
         )}
       </div>
@@ -190,10 +153,6 @@ export default function AgenteButton() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </>
