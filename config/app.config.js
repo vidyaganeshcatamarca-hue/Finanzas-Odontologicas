@@ -7,6 +7,11 @@
  */
 
 const APP_CONFIG = {
+  // ── Agente IA ─────────────────────────────────────────────
+  agente: {
+    webhookUrl: "https://n8n.vaiyaji.com.ar/webhook/finance/reporte",
+  },
+
   // ── Branding ──────────────────────────────────────────────
   clinicName: "Odontologia Maria Laura",
   appVersion: "1.0.0",

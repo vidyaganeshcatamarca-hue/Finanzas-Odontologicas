@@ -11,6 +11,7 @@ import GaugeChart from "@/components/charts/GaugeChart";
 import DonutChart from "@/components/charts/DonutChart";
 import { SkeletonGrid } from "@/components/ui/SkeletonCard";
 import TooltipModal from "@/components/ui/TooltipModal";
+import AgenteButton from "@/components/ui/AgenteButton";
 import { Trophy, Calendar } from "lucide-react";
 import { useState } from "react";
 
@@ -234,6 +235,9 @@ export default function SignosVitales() {
           ✅ No hay alertas activas este período
         </div>
       )}
+
+      {/* ── Agente IA ── */}
+      <AgenteButton />
 
       {/* ── Modales ── */}
       {modal("puntoEquilibrio") && (
