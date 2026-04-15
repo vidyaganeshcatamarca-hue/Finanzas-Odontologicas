@@ -44,7 +44,49 @@ export default function AgenteButton({
     setErrorMsg(null);
 
     try {
-      const payload = buildAgentePayload(ctx);
+      // ── Helper para calcular mes/año previo ──────────────────────────────
+      const getPrevMonth = (year, month, offset) => {
+        let m = month - offset;
+        let y = year;
+        while (m < 0) { m += 12; y--; }
+        return { year: y, month: m };
+      };
+
+      const { selectedYear, selectedMonth } = ctx;
+      const p1 = getPrevMonth(selectedYear, selectedMonth, 1);
+      const p2 = getPrevMonth(selectedYear, selectedMonth, 2);
+      const p3 = getPrevMonth(selectedYear, selectedMonth, 3);
+
+      // ── Fetch paralelo de datos suplementarios (sin bloquear por errores) ─
+      const safeJson = (r) => r.ok ? r.json().catch(() => null) : null;
+
+      const [
+        tratamientosRes,
+        gastosRes,
+        heatmapRes,
+        gastosP1,
+        gastosP2,
+        gastosP3,
+      ] = await Promise.all([
+        fetch(`/api/sheets?type=tratamientos&year=${selectedYear}&month=${selectedMonth}`).then(safeJson),
+        fetch(`/api/sheets?type=gastos&year=${selectedYear}&month=${selectedMonth}`).then(safeJson),
+        fetch(`/api/sheets?type=heatmap&year=${selectedYear}&month=${selectedMonth}`).then(safeJson),
+        fetch(`/api/sheets?type=gastos&year=${p1.year}&month=${p1.month}`).then(safeJson),
+        fetch(`/api/sheets?type=gastos&year=${p2.year}&month=${p2.month}`).then(safeJson),
+        fetch(`/api/sheets?type=gastos&year=${p3.year}&month=${p3.month}`).then(safeJson),
+      ]);
+
+      const payload = buildAgentePayload({
+        ...ctx,
+        tratamientos: tratamientosRes?.tratamientos ?? [],
+        gastos:       gastosRes?.gastos ?? [],
+        prevGastos:   [
+          gastosP1?.gastos ?? [],
+          gastosP2?.gastos ?? [],
+          gastosP3?.gastos ?? [],
+        ],
+        heatmapDays:  heatmapRes?.days ?? [],
+      });
       payload.config_agente.intencion = intent;
 
       const res = await fetch(webhookUrl, {
