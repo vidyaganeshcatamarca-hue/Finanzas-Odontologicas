@@ -260,8 +260,9 @@ export default function SignosVitales() {
         </div>
 
         {/* Botones de Agentes */}
-        <AgenteButton />
+        <AgenteButton agentId="cfo" />
         <AgenteButton
+          agentId="wiki"
           label="Consultar Agente Wiki"
           webhookUrl={APP_CONFIG.agente.webhookUrlWiki}
         />

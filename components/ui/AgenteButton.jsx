@@ -14,17 +14,28 @@ import AgenteResponseModal from "@/components/ui/AgenteResponseModal";
  * - webhookUrl: URL a la que enviar el payload
  * - intent: "analisis" | "pregunta" (default "analisis")
  */
+/**
+ * AgenteButton — Botón genérico para consultar agentes IA
+ *
+ * Props:
+ * - agentId: Identificador único del agente (para persistencia)
+ * - label: Texto del botón base
+ * - webhookUrl: URL a la que enviar el payload
+ * - intent: "analisis" | "pregunta" (default "analisis")
+ */
 export default function AgenteButton({
+  agentId,
   label = "Consultar Agente IA",
   webhookUrl = APP_CONFIG.agente.webhookUrl,
   intent = "analisis"
 }) {
-  const ctx = useApp();
+  const { agenteResults, saveAgenteResult, ...ctx } = useApp();
   const [estado, setEstado] = useState("idle");
-  const [respuesta, setRespuesta] = useState(null);
-  const [timestamp, setTimestamp] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [showModal, setShowModal] = useState(false);
+
+  // Obtener resultado previo del contexto global
+  const previousResult = agenteResults[agentId];
 
   const handleConsultar = async () => {
     if (estado === "loading") return;
@@ -34,7 +45,6 @@ export default function AgenteButton({
 
     try {
       const payload = buildAgentePayload(ctx);
-      // Sobrescribir intención si se pasa por prop
       payload.config_agente.intencion = intent;
 
       const res = await fetch(webhookUrl, {
@@ -47,8 +57,9 @@ export default function AgenteButton({
 
       const data = await res.json();
 
-      setRespuesta(data);
-      setTimestamp(new Date().toISOString());
+      // GUARDAR EN CONTEXTO GLOBAL
+      saveAgenteResult(agentId, data);
+      
       setEstado("idle");
       setShowModal(true);
     } catch (err) {
@@ -59,11 +70,15 @@ export default function AgenteButton({
 
   const isLoading = estado === "loading";
   const isError   = estado === "error";
+  const hasResult = !!previousResult;
+
+  // Lógica de etiquetas solicitada por el usuario
+  const finalLabel = hasResult ? "Volver a Consultar" : label;
 
   return (
     <>
-      <div style={{ marginBottom: "8px" }}>
-        {/* Botón principal */}
+      <div style={{ marginBottom: "12px" }}>
+        {/* Botón principal (Consultar / Volver a Consultar) */}
         <button
           onClick={handleConsultar}
           disabled={isLoading}
@@ -87,16 +102,7 @@ export default function AgenteButton({
             letterSpacing: "0.4px",
             boxShadow: isLoading ? "none" : "0 4px 20px rgba(0,119,182,0.35)",
             transition: "all 0.25s ease",
-          }}
-          onMouseEnter={(e) => {
-            if (!isLoading) {
-              e.currentTarget.style.boxShadow = "0 6px 28px rgba(0,119,182,0.55)";
-              e.currentTarget.style.transform = "translateY(-1px)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,119,182,0.35)";
-            e.currentTarget.style.transform = "translateY(0)";
+            marginBottom: hasResult ? "6px" : "0",
           }}
         >
           {isLoading ? (
@@ -107,11 +113,35 @@ export default function AgenteButton({
           ) : (
             <>
               <Bot size={18} />
-              {label}
+              {finalLabel}
               <Sparkles size={14} style={{ opacity: 0.7 }} />
             </>
           )}
         </button>
+
+        {/* Link para VER ANÁLISIS PREVIO (sin consultar n8n) */}
+        {hasResult && !isLoading && (
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              width: "100%",
+              background: "none",
+              border: "1px dashed var(--border)",
+              borderRadius: "var(--radius-sm)",
+              padding: "8px",
+              color: "var(--color-primary)",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+            }}
+          >
+            Ver último análisis disponible
+          </button>
+        )}
 
         {/* Mensaje de error */}
         {isError && (
@@ -141,10 +171,10 @@ export default function AgenteButton({
       </div>
 
       {/* ── Modal de respuesta ──────────────────────────────────────────── */}
-      {showModal && respuesta && (
+      {showModal && hasResult && (
         <AgenteResponseModal
-          respuesta={respuesta}
-          timestamp={timestamp}
+          respuesta={previousResult.data}
+          timestamp={previousResult.timestamp}
           onClose={() => setShowModal(false)}
         />
       )}

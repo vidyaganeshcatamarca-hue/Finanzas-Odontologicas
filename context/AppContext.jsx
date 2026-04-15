@@ -34,6 +34,8 @@ export function AppProvider({ children }) {
   const [error,         setError]         = useState(null);
   const [lastSync,      setLastSync]      = useState(null);
   const [availableSheets, setAvailableSheets] = useState([]);
+  // ── Resultados de Agentes IA ─────────────────────────────
+  const [agenteResults, setAgenteResults] = useState({});
 
   // [SOLUCIÓN: EVITAR BUCLE INFINITO]
   // Usamos Refs para chequear si ya hay datos sin disparar una recreación de la función
@@ -177,6 +179,16 @@ export function AppProvider({ children }) {
     fetchTratamientos(selectedYear, selectedMonth);
   }, [selectedYear, selectedMonth, fetchTratamientos]);
 
+  const saveAgenteResult = useCallback((id, result) => {
+    setAgenteResults((prev) => ({
+      ...prev,
+      [id]: {
+        data: result,
+        timestamp: new Date().toISOString(),
+      },
+    }));
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -217,6 +229,9 @@ export function AppProvider({ children }) {
         // Acciones
         refetch,
         fetchTratamientosForCurrentMonth,
+        // Agentes IA
+        agenteResults,
+        saveAgenteResult,
       }}
     >
       {children}
