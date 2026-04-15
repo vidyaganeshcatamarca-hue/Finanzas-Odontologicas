@@ -10,7 +10,6 @@ const APP_CONFIG = {
   // ── Agente IA ─────────────────────────────────────────────
   agente: {
     webhookUrl: "https://n8n.vaiyaji.com.ar/webhook/finance/reporte",
-    webhookUrlWiki: "https://n8n.vaiyaji.com.ar/webhook/finance/reporte2",
   },
 
   // ── Branding ──────────────────────────────────────────────
