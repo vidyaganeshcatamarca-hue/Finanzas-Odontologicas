@@ -3,12 +3,13 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 /** Donut — Índice de Cobrabilidad. Valor FUERA del anillo (debajo). */
 export default function DonutChart({ value }) {
-  const pct = typeof value === "number" ? Math.min(Math.max(value, 0), 1) : 0;
+  const displayValue = typeof value === "number" ? value : 0;
+  const pct = Math.min(Math.max(displayValue, 0), 1);
 
   const color =
-    pct < 0.50 ? "#E63946" :
-    pct < 0.75 ? "#FFB703" :
-                 "#52B788";
+    displayValue < 0.50 ? "#E63946" :
+    displayValue < 0.75 ? "#FFB703" :
+                          "#52B788";
 
   const data = [
     { name: "Cobrado",   value: pct },
@@ -50,10 +51,9 @@ export default function DonutChart({ value }) {
         </PieChart>
       </ResponsiveContainer>
 
-      {/* Valor FUERA del anillo */}
       <div style={{ textAlign: "center", marginTop: "4px" }}>
         <div style={{ fontSize: "1.4rem", fontWeight: 800, color, lineHeight: 1 }}>
-          {(pct * 100).toLocaleString("es-PY", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+          {(displayValue * 100).toLocaleString("es-PY", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
         </div>
         <div style={{ fontSize: "0.6rem", color: "var(--text-muted)", marginTop: "3px" }}>
           COBRADO

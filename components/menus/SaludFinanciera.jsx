@@ -189,9 +189,14 @@ export default function SaludFinanciera() {
           <div className="card" style={{ marginBottom: "16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
               <div>
-                <div className="card-label">Ventas no cobradas (período)</div>
-                <div style={{ fontSize: "1.1rem", fontWeight: 800, color: pctCalle > 0.3 ? "var(--color-danger)" : "var(--color-warning)" }}>
-                  {formatCurrency(totalCalle)}
+                <div className="card-label">
+                  {totalCalle >= 0 ? "Ventas no cobradas (período)" : "Excedente de Cobros (Recupero)"}
+                </div>
+                <div style={{ 
+                  fontSize: "1.1rem", fontWeight: 800, 
+                  color: totalCalle < 0 ? "var(--color-success-light)" : (pctCalle > 0.3 ? "var(--color-danger)" : "var(--color-warning)") 
+                }}>
+                  {totalCalle < 0 ? `+ ${formatCurrency(Math.abs(totalCalle))}` : formatCurrency(totalCalle)}
                 </div>
               </div>
               <select
@@ -211,8 +216,8 @@ export default function SaludFinanciera() {
 
             <div style={{ marginBottom: "8px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--text-secondary)", marginBottom: "4px" }}>
-                <span>Vendido sin cobrar</span>
-                <span>{(pctCalle * 100).toFixed(1)}% del total</span>
+                <span>{totalCalle >= 0 ? "Vendido sin cobrar" : "Cobrado por encima de ventas"}</span>
+                <span>{totalCalle >= 0 ? `${(pctCalle * 100).toFixed(1)}% del total` : "Cobro histórico"}</span>
               </div>
               <div style={{ height: "8px", background: "var(--bg-hover)", borderRadius: "4px", overflow: "hidden" }}>
                 <div style={{
