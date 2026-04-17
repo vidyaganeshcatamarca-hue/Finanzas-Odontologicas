@@ -166,7 +166,9 @@ const APP_CONFIG = {
       tipo: "danger",
     },
     brechaPapelRealidad: (pct, ic) =>
-      `Doctora, hoy existe una brecha del ${pct}% entre su ganancia y su efectivo. Esto se debe a que su Índice de Cobrabilidad es ${ic}%. Usted está 'prestando' su trabajo. Necesitamos acelerar los cobros o renegociar plazos con proveedores para cerrar esta brecha.`,
+      `Doctora, hoy existe una brecha del ${pct}% entre su ganancia y su efectivo. Esto se debe a que su Índice de Cobrabilidad es ${ic}. Usted está 'prestando' su trabajo. Necesitamos acelerar los cobros para cerrar esta brecha.`,
+    brechaPositiva: (pct, ic) =>
+      `¡Excelente gestión! Su Flujo de Caja supera su Utilidad en un ${pct}%. Esto indica que su Índice de Cobrabilidad es del ${ic}, lo que significa que está recuperando deuda de meses anteriores.`,
     // Menú 3
     alertaPrecios: (nombre, caida) => ({
       emoji: "⚠️",

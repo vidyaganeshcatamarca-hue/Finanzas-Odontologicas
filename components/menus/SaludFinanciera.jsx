@@ -266,7 +266,7 @@ export default function SaludFinanciera() {
               <ProgressBar value={flujoCajaNeto} max={ventasTotales} color={liquidezColor} />
             </div>
 
-            {brecha !== 0 && (
+            {brecha > 1000 && (
               <div style={{
                 marginTop: "14px", padding: "10px 12px",
                 background: "rgba(255,183,3,0.08)", borderRadius: "var(--radius-sm)",
@@ -274,6 +274,17 @@ export default function SaludFinanciera() {
                 lineHeight: 1.5, color: "var(--text-secondary)",
               }}>
                 {APP_CONFIG.insights.brechaPapelRealidad(brechaPct, formatPercentSmart(indiceCobrabilidad))}
+              </div>
+            )}
+
+            {brecha < -1000 && (
+              <div style={{
+                marginTop: "14px", padding: "10px 12px",
+                background: "rgba(45,106,79,0.08)", borderRadius: "var(--radius-sm)",
+                border: "1px solid rgba(45,106,79,0.2)", fontSize: "0.78rem",
+                lineHeight: 1.5, color: "var(--text-secondary)",
+              }}>
+                {APP_CONFIG.insights.brechaPositiva(brechaPct, formatPercentSmart(indiceCobrabilidad))}
               </div>
             )}
           </div>
