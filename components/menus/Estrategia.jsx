@@ -15,7 +15,7 @@ import {
 import { SkeletonChart } from "@/components/ui/SkeletonCard";
 import { useState, useEffect, useCallback } from "react";
 
-const { insights, thresholds, colors } = APP_CONFIG;
+const { thresholds, colors } = APP_CONFIG;
 const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 /** Acumulados diarios a ritmo lineal */
@@ -112,9 +112,9 @@ export default function Estrategia() {
   const estadoProyeccion  = calcEstadoProyeccion(ventasProyectadas, currentPE);
 
   const semaforo = {
-    en_camino:     { color: colors.success, emoji: "🟢", label: "EN CAMINO" },
-    zona_riesgo:   { color: colors.warning, emoji: "🟡", label: "ZONA DE RIESGO" },
-    alerta_perdida:{ color: colors.danger,  emoji: "🔴", label: "ALERTA DE PÉRDIDA" },
+    en_camino:     { color: colors.success, emoji: "🟢", label: "EN CAMINO",      desc: "Proyección Excelente: El mes cerrará con un margen de seguridad sólido." },
+    zona_riesgo:   { color: colors.warning, emoji: "🟡", label: "ZONA DE RIESGO", desc: "Cierre Ajustado: Alcanzaremos el equilibrio, pero la utilidad será mínima." },
+    alerta_perdida:{ color: colors.danger,  emoji: "🔴", label: "ALERTA DE PÉRDIDA", desc: "Pronóstico Crítico: Al ritmo actual, el mes cerrará por debajo de los costos." },
   }[estadoProyeccion];
 
   const refLineValue = currentPE;
@@ -173,7 +173,6 @@ export default function Estrategia() {
   };
 
   if (!esMesActual) {
-    const ventasReales = ventasPTD;
     const deltaVentas = prev?.ventasTotales
       ? ((ventasPTD - prev.ventasTotales) / prev.ventasTotales * 100).toFixed(1)
       : null;

@@ -4,7 +4,7 @@ import APP_CONFIG from "@/config/app.config";
 import {
   formatCurrency, formatPercent, formatPercentSmart, formatVariation,
 } from "@/lib/formatters";
-import { calcVariation, parseDiaEquilibrio } from "@/lib/calculations";
+import { parseDiaEquilibrio } from "@/lib/calculations";
 import KPICard from "@/components/cards/KPICard";
 import GaugeChart from "@/components/charts/GaugeChart";
 import DonutChart from "@/components/charts/DonutChart";
@@ -14,16 +14,16 @@ import AgenteButton from "@/components/ui/AgenteButton";
 import { Trophy, Calendar } from "lucide-react";
 import { useState } from "react";
 
-const { tooltips, insights, thresholds } = APP_CONFIG;
+const { tooltips, thresholds } = APP_CONFIG;
 
 export default function SignosVitales() {
   const {
     kpis, loading, error,
     utilidadAjustada, esMesActual,
-    diaActual, diaEquilibrioNum, 
+    diaActual, 
     metaAlcanzada: currentMetaAlcanzada,
     estadoGlobal,
-    costoFijoReferencia, diasTotalesMes,
+    diasTotalesMes,
     peDinamico, msCalculado, currentDiaEq,
     projectedVelocity,
   } = useApp();
@@ -59,7 +59,9 @@ export default function SignosVitales() {
   // ── Día de equilibrio ────────────────────────────────────────
   const diaEqDisplay = (() => {
     if (esMesActual) {
-      return `Día ${currentDiaEq}`;
+      if (!currentDiaEq) return "Proyección inviable (ventas $0)";
+      if (currentDiaEq > diasTotalesMes) return `No se logrará (${currentDiaEq} días req.)`;
+      return `Proyectado: Día ${currentDiaEq}`;
     }
     const raw = kpis.diaEquilibrio;
     if (!raw || String(raw).includes("#N/A") || String(raw).includes("2042")) return "No se alcanzó";

@@ -1,7 +1,7 @@
 "use client";
 import { useApp } from "@/context/AppContext";
 import APP_CONFIG from "@/config/app.config";
-import { formatCurrency, formatPercent, formatPercentSmart, formatVariation } from "@/lib/formatters";
+import { formatCurrency, formatPercentSmart } from "@/lib/formatters";
 import DepletionChart from "@/components/charts/DepletionChart";
 import Gastos from "@/components/menus/Gastos";
 import { SkeletonGrid, SkeletonChart } from "@/components/ui/SkeletonCard";
@@ -9,7 +9,7 @@ import { Wallet, FileText, Layers } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import TooltipModal from "@/components/ui/TooltipModal";
 
-const { tooltips, insights, thresholds } = APP_CONFIG;
+const { tooltips, thresholds } = APP_CONFIG;
 
 const PERIODOS = [
   { label: "Mes actual",   meses: 1 },
@@ -69,10 +69,6 @@ export default function SaludFinanciera() {
   } = kpis;
 
   const costosFijosDisplay = esMesActual ? costoFijoDevengado : (costosFijos ?? 0);
-  const brecha    = utilidadAjustada - flujoCajaNeto;
-  const brechaPct = utilidadAjustada !== 0
-    ? Math.abs(brecha / utilidadAjustada * 100).toFixed(0)
-    : 0;
 
   const liquidezColor =
     flujoCajaNeto > 0 && utilidadAjustada > 0 ? "var(--color-success-light)" :
@@ -260,7 +256,8 @@ export default function SaludFinanciera() {
                 <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Dinero real en su cuenta</span>
                 <span style={{ fontWeight: 700, color: liquidezColor }}>{formatCurrency(flujoCajaNeto)}</span>
               </div>
-            <ProgressBar value={flujoCajaNeto} max={ventasTotales} color={liquidezColor} />
+              <ProgressBar value={flujoCajaNeto} max={ventasTotales} color={liquidezColor} />
+            </div>
           </div>
 
           {/* Semáforo de Liquidez */}
@@ -270,6 +267,13 @@ export default function SaludFinanciera() {
               <div>
                 <div style={{ fontWeight: 700, color: liquidezColor, fontSize: "0.85rem" }}>
                   {liquidezLabel.replace(/^[^\s]+\s/, "")}
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
+                  {flujoCajaNeto > 0 && utilidadAjustada > 0
+                    ? "Sus ganancias se están transformando en dinero real."
+                    : flujoCajaNeto >= 0
+                    ? "Cuidado: Está ganando dinero pero no le queda nada en la cuenta."
+                    : "Alerta Crítica: Usted es rentable pero se está quedando sin efectivo."}
                 </div>
               </div>
             </div>
