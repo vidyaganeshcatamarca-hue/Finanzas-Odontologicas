@@ -38,16 +38,20 @@ function getQuadrant(volumen, margenUnitario, medVolumen, medMargen) {
 }
 
 export default function Produccion() {
-  const { tratamientos, tratPrev, loadingTrat, isRefreshingTrat, fetchTratamientosForCurrentMonth } = useApp();
+  const { 
+    selectedYear, selectedMonth, 
+    tratamientos, tratPrev, loadingTrat, isRefreshingTrat, 
+    fetchTratamientosForCurrentMonth 
+  } = useApp();
+  
   const [search, setSearch]             = useState("");
   const [selectedBubble, setSelectedBubble] = useState(null);
-  const [loaded, setLoaded]             = useState(false);
   const [showGuia, setShowGuia]         = useState(false);
   const chartRef = useRef(null);
 
   useEffect(() => {
-    if (!loaded) { fetchTratamientosForCurrentMonth(); setLoaded(true); }
-  }, [loaded, fetchTratamientosForCurrentMonth]);
+    fetchTratamientosForCurrentMonth();
+  }, [selectedYear, selectedMonth, fetchTratamientosForCurrentMonth]);
 
   // Click fuera para cerrar detalle
   useEffect(() => {
