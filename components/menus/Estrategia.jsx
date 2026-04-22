@@ -112,9 +112,9 @@ export default function Estrategia() {
   const estadoProyeccion  = calcEstadoProyeccion(ventasProyectadas, currentPE);
 
   const semaforo = {
-    en_camino:     { color: colors.success, emoji: "🟢", label: "EN CAMINO",      desc: "Proyección Excelente: El mes cerrará con un margen de seguridad sólido." },
-    zona_riesgo:   { color: colors.warning, emoji: "🟡", label: "ZONA DE RIESGO", desc: "Cierre Ajustado: Alcanzaremos el equilibrio, pero la utilidad será mínima." },
-    alerta_perdida:{ color: colors.danger,  emoji: "🔴", label: "ALERTA DE PÉRDIDA", desc: "Pronóstico Crítico: Al ritmo actual, el mes cerrará por debajo de los costos." },
+    en_camino:     { color: colors.success, emoji: "🟢", label: "EN CAMINO" },
+    zona_riesgo:   { color: colors.warning, emoji: "🟡", label: "ZONA DE RIESGO" },
+    alerta_perdida:{ color: colors.danger,  emoji: "🔴", label: "ALERTA DE PÉRDIDA" },
   }[estadoProyeccion];
 
   const refLineValue = currentPE;

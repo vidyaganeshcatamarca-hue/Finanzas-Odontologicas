@@ -59,9 +59,7 @@ export default function SignosVitales() {
   // ── Día de equilibrio ────────────────────────────────────────
   const diaEqDisplay = (() => {
     if (esMesActual) {
-      if (!currentDiaEq) return "Proyección inviable (ventas $0)";
-      if (currentDiaEq > diasTotalesMes) return `No se logrará (${currentDiaEq} días req.)`;
-      return `Proyectado: Día ${currentDiaEq}`;
+      return `Día ${currentDiaEq}`;
     }
     const raw = kpis.diaEquilibrio;
     if (!raw || String(raw).includes("#N/A") || String(raw).includes("2042")) return "No se alcanzó";

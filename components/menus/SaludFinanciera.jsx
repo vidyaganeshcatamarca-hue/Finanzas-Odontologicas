@@ -271,13 +271,6 @@ export default function SaludFinanciera() {
                 <div style={{ fontWeight: 700, color: liquidezColor, fontSize: "0.85rem" }}>
                   {liquidezLabel.replace(/^[^\s]+\s/, "")}
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
-                  {flujoCajaNeto > 0 && utilidadAjustada > 0
-                    ? "Sus ganancias se están transformando en dinero real."
-                    : flujoCajaNeto >= 0
-                    ? "Cuidado: Está ganando dinero pero no le queda nada en la cuenta."
-                    : "Alerta Crítica: Usted es rentable pero se está quedando sin efectivo."}
-                </div>
               </div>
             </div>
           </div>
