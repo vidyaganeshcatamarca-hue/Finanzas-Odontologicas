@@ -12,7 +12,6 @@ import {
   calcProyeccionCierre, calcEstadoProyeccion,
   calcVariation, buildHeatmapData,
 } from "@/lib/calculations";
-import InsightCard from "@/components/cards/InsightCard";
 import { SkeletonChart } from "@/components/ui/SkeletonCard";
 import { useState, useEffect, useCallback } from "react";
 
@@ -155,26 +154,6 @@ export default function Estrategia() {
     ? Math.max(diasTotalesMes - diaEqProyectado, 0)
     : 0;
 
-  const activeInsights = [];
-  if (esMesActual && prev?.ventasTotales) {
-    const ventasPrevPTD = prev.ventasTotales * (diaActual / diasTotalesMes);
-    if (ventasPTD < ventasPrevPTD && ventasPrevPTD > 0) {
-      const pct   = Math.abs(((ventasPTD - ventasPrevPTD) / ventasPrevPTD) * 100).toFixed(1);
-      const monto = formatCurrency(ventasPrevPTD - ventasPTD);
-      activeInsights.push(insights.alertaTendenciaPTD(pct, monto));
-    }
-  }
-  if (heatmapData.length > 0) {
-    const weekTotals = heatmapData.map((week, i) => ({
-      semana: i + 1,
-      total: week.reduce((s, d) => s + (d.margin ?? 0), 0),
-    }));
-    const weakest = weekTotals.sort((a, b) => a.total - b.total)[0];
-    if (weakest) activeInsights.push(insights.semanaFloja(weakest.semana));
-  }
-  if (esMesActual && diaEqProyectado && diaEqProyectado > diaActual + thresholds.equilibrioLejano) {
-    activeInsights.push(insights.equilibrioLejano(diaEqProyectado, diasRentabilidad));
-  }
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -245,15 +224,6 @@ export default function Estrategia() {
 
   return (
     <div>
-      <div className="card" style={{ marginBottom: "12px", borderColor: semaforo.color }}>
-        <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-          <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>{semaforo.emoji}</span>
-          <div>
-            <div style={{ fontWeight: 800, color: semaforo.color, marginBottom: "4px" }}>{semaforo.label}</div>
-            <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>{semaforo.desc}</div>
-          </div>
-        </div>
-      </div>
 
       <div className="section-title">Tendencia y Pronóstico de Ventas</div>
       <div className="card" style={{ marginBottom: "16px", padding: "12px" }}>
@@ -309,12 +279,6 @@ export default function Estrategia() {
         </div>
       )}
 
-      {activeInsights.length > 0 && (
-        <>
-          <div className="section-title">Insights Estratégicos</div>
-          {activeInsights.map((ins, i) => <InsightCard key={i} {...ins} />)}
-        </>
-      )}
     </div>
   );
 }

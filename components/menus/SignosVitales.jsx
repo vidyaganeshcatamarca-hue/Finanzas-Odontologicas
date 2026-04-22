@@ -6,7 +6,6 @@ import {
 } from "@/lib/formatters";
 import { calcVariation, parseDiaEquilibrio } from "@/lib/calculations";
 import KPICard from "@/components/cards/KPICard";
-import InsightCard from "@/components/cards/InsightCard";
 import GaugeChart from "@/components/charts/GaugeChart";
 import DonutChart from "@/components/charts/DonutChart";
 import { SkeletonGrid } from "@/components/ui/SkeletonCard";
@@ -56,35 +55,6 @@ export default function SignosVitales() {
   // ── Color Margen Rentabilidad ────────────────────────────────
   const mrColor = currentMR < thresholds.margenRentabilidad.critico
     ? "danger" : "success";
-
-  // ── Insights Activos ─────────────────────────────────────────
-  const activeInsights = [];
-
-  // A. Ineficiencia operativa
-  if (prev.ventasTotales && prev.puntoEquilibrio &&
-    (kpis.ventasTotales / prev.ventasTotales) < (kpis.puntoEquilibrio / prev.puntoEquilibrio)) {
-    activeInsights.push(insights.ineficienciaOperativa);
-  }
-
-  // B. Margen bajo
-  if (currentMR < thresholds.margenRentabilidad.critico) {
-    activeInsights.push(insights.margenBajo);
-  }
-
-  // C. Calendario fallido
-  if (currentDiaEq && diaActual > currentDiaEq && utilidadAjustada < 0) {
-    activeInsights.push(insights.calendarioFallido);
-  }
-
-  // D. Motor Dinámico MS (Mes Actual)
-  if (esMesActual) {
-    activeInsights.push({
-      emoji: currentMS < 0.20 ? "🚨" : "🛡️",
-      titulo: `Día ${diaActual}: Meta de Equilibrio Dinámico`,
-      texto: `Doctor, al día ${diaActual}, su meta de facturación para cubrir costos es de ${formatCurrency(peDinamico)}.\n\nSu Margen de Seguridad actual es del ${formatPercentSmart(currentMS)}. Esto indica que sus ventas pueden caer un ${formatPercentSmart(currentMS)} antes de que la clínica empiece a perder dinero hoy.`,
-      tipo: currentMS < 0.20 ? "danger" : "info"
-    });
-  }
 
   // ── Día de equilibrio ────────────────────────────────────────
   const diaEqDisplay = (() => {
@@ -216,25 +186,6 @@ export default function SignosVitales() {
           </div>
         )}
       </div>
-
-      {/* ── Motor de Insights ── */}
-      {activeInsights.length > 0 && (
-        <>
-          <div className="section-title">Diagnóstico Inteligente</div>
-          {activeInsights.map((insight, i) => (
-            <InsightCard key={i} {...insight} />
-          ))}
-        </>
-      )}
-
-      {activeInsights.length === 0 && !loading && (
-        <div style={{
-          textAlign: "center", padding: "16px",
-          color: "var(--text-muted)", fontSize: "0.8rem",
-        }}>
-          ✅ No hay alertas activas este período
-        </div>
-      )}
 
       {/* ── Agente de Diagnóstico ── */}
       <div style={{ marginTop: "16px" }}>

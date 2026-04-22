@@ -7,7 +7,6 @@ import {
 import { formatCurrency } from "@/lib/formatters";
 import { useApp } from "@/context/AppContext";
 import APP_CONFIG from "@/config/app.config";
-import InsightCard from "@/components/cards/InsightCard";
 import { SkeletonChart, SkeletonTable } from "@/components/ui/SkeletonCard";
 import { Search, Info, ChevronRight, MousePointer2, ChevronsLeft } from "lucide-react";
 import { useState, useEffect, useRef } from "react";

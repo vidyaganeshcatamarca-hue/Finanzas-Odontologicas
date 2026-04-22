@@ -2,7 +2,6 @@
 import { useApp } from "@/context/AppContext";
 import APP_CONFIG from "@/config/app.config";
 import { formatCurrency, formatPercent, formatPercentSmart, formatVariation } from "@/lib/formatters";
-import InsightCard from "@/components/cards/InsightCard";
 import DepletionChart from "@/components/charts/DepletionChart";
 import Gastos from "@/components/menus/Gastos";
 import { SkeletonGrid, SkeletonChart } from "@/components/ui/SkeletonCard";
@@ -85,13 +84,6 @@ export default function SaludFinanciera() {
     flujoCajaNeto >= 0 ? "🟡 ADVERTENCIA" :
     "🔴 RIESGO DE LIQUIDEZ";
 
-  const activeInsights = [];
-  if (utilidadAjustada > 0 && flujoCajaNeto < 0 && indiceCobrabilidad < 0.5) {
-    const ic = formatPercentSmart(indiceCobrabilidad);
-    activeInsights.push({ ...insights.trampaDePapel, texto: insights.trampaDePapel.texto.replace("{valor}", ic) });
-  }
-  if (honorariosLaura > utilidadAjustada) activeInsights.push(insights.sostenibilidadDueno);
-  if (egresosReales > ingresosReales)     activeInsights.push(insights.burnRate);
 
   const totalCalle = dineroCalle.reduce((s, d) => s + d.calle, 0);
   const totalVentasCalle = dineroCalle.reduce((s, d) => s + d.ventas, 0);
@@ -268,30 +260,7 @@ export default function SaludFinanciera() {
                 <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Dinero real en su cuenta</span>
                 <span style={{ fontWeight: 700, color: liquidezColor }}>{formatCurrency(flujoCajaNeto)}</span>
               </div>
-              <ProgressBar value={flujoCajaNeto} max={ventasTotales} color={liquidezColor} />
-            </div>
-
-            {brecha > 1000 && (
-              <div style={{
-                marginTop: "14px", padding: "10px 12px",
-                background: "rgba(255,183,3,0.08)", borderRadius: "var(--radius-sm)",
-                border: "1px solid rgba(255,183,3,0.2)", fontSize: "0.78rem",
-                lineHeight: 1.5, color: "var(--text-secondary)",
-              }}>
-                {APP_CONFIG.insights.brechaPapelRealidad(brechaPct, formatPercentSmart(indiceCobrabilidad))}
-              </div>
-            )}
-
-            {brecha < -1000 && (
-              <div style={{
-                marginTop: "14px", padding: "10px 12px",
-                background: "rgba(45,106,79,0.08)", borderRadius: "var(--radius-sm)",
-                border: "1px solid rgba(45,106,79,0.2)", fontSize: "0.78rem",
-                lineHeight: 1.5, color: "var(--text-secondary)",
-              }}>
-                {APP_CONFIG.insights.brechaPositiva(brechaPct, formatPercentSmart(indiceCobrabilidad))}
-              </div>
-            )}
+            <ProgressBar value={flujoCajaNeto} max={ventasTotales} color={liquidezColor} />
           </div>
 
           {/* Semáforo de Liquidez */}
@@ -313,13 +282,6 @@ export default function SaludFinanciera() {
             </div>
           </div>
 
-          {/* Insights */}
-          {activeInsights.length > 0 && (
-            <>
-              <div className="section-title">Diagnóstico Inteligente</div>
-              {activeInsights.map((ins, i) => <InsightCard key={i} {...ins} />)}
-            </>
-          )}
 
           {/* Modal Honorarios */}
           {showHonorariosModal && (
